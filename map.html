@@ -2,16 +2,45 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW Counties</title>
+  <title>DFW NMSF – Inline Bar Marker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
   <style>
     html, body, #map { height: 100%; margin: 0; }
+
+    /* custom bar marker */
+    .nmsf-marker {
+      /* no background */
+      background: transparent;
+      border: none;
+      /* center the bars over the point */
+      transform: translate(-12px, -40px); /* adjust to taste */
+    }
+    .nmsf-chart {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      height: 40px;  /* overall bar height */
+    }
+    .nmsf-bar {
+      width: 6px;             /* narrower bars */
+      background: rgba(31, 120, 180, 0.55); /* semi-transparent */
+      border-radius: 2px 2px 0 0;
+    }
+    .nmsf-label {
+      font-size: 10px;
+      color: #000;
+      text-shadow: 0 1px 2px #fff;
+      margin-bottom: 2px;
+      text-align: center;
+    }
+
+    /* simple error box for GeoJSON failures */
     #error {
       position: absolute;
       top: 10px; left: 10px;
@@ -28,19 +57,16 @@
   <div id="map"></div>
   <div id="error"></div>
 
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
+    // 1. base map
     const map = L.map('map').setView([32.9, -97.0], 9);
-
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // 2. draw the four counties (same as before)
     const wantedFips = ['48085','48113','48121','48439']; // Collin, Dallas, Denton, Tarrant
 
     function showError(msg) {
@@ -49,39 +75,81 @@
       el.style.display = 'block';
     }
 
-    // this must match the filename in the repo root
     fetch('tx-counties.geojson')
       .then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       })
       .then(data => {
-        const layer = L.geoJSON(data, {
+        const countiesLayer = L.geoJSON(data, {
           filter: f => {
             const p = f.properties || {};
             return wantedFips.includes(p.FIPS);
           },
           style: {
-            color: '#1f78b4',
+            color: '#555',
             weight: 2,
-            fillColor: '#a6cee3',
-            fillOpacity: 0.25
+            fillColor: '#cccccc',
+            fillOpacity: 0.1
           },
-          onEachFeature: (f, l) => {
-            l.bindPopup(f.properties.COUNTY || 'County');
+          onEachFeature: (f, layer) => {
+            layer.bindPopup(f.properties.COUNTY || 'County');
           }
         }).addTo(map);
 
-        if (layer.getLayers().length > 0) {
-          map.fitBounds(layer.getBounds());
-        } else {
-          showError('GeoJSON loaded, but no features matched FIPS 48085, 48113, 48121, 48439.');
+        if (countiesLayer.getLayers().length > 0) {
+          map.fitBounds(countiesLayer.getBounds());
         }
       })
       .catch(err => {
         console.error(err);
-        showError('Could not load tx-counties.geojson. Check filename/location.');
+        showError('Could not load tx-counties.geojson.');
       });
+
+    // 3. Greenhill data
+    const greenhill = {
+      name: 'Greenhill School',
+      lat: 32.941856,
+      lng: -96.8463216,
+      semis: {
+        2022: 6,
+        2023: 8,
+        2024: 10,
+        2025: 10
+      }
+    };
+
+    // scale bars to max
+    const maxVal = Math.max(
+      greenhill.semis[2022],
+      greenhill.semis[2023],
+      greenhill.semis[2024],
+      greenhill.semis[2025]
+    );
+    const maxPx = 40; // match .nmsf-chart height
+
+    function barHeight(v) {
+      return Math.max(2, (v / maxVal) * maxPx);
+    }
+
+    // build HTML for the custom marker
+    const markerHtml = `
+      <div class="nmsf-label">${greenhill.name}</div>
+      <div class="nmsf-chart">
+        <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2022])}px" title="2022: ${greenhill.semis[2022]}"></div>
+        <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2023])}px" title="2023: ${greenhill.semis[2023]}"></div>
+        <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2024])}px" title="2024: ${greenhill.semis[2024]}"></div>
+        <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2025])}px" title="2025: ${greenhill.semis[2025]}"></div>
+      </div>
+    `;
+
+    const greenhillIcon = L.divIcon({
+      className: 'nmsf-marker',
+      html: markerHtml,
+      iconSize: [0, 0] // let content size itself
+    });
+
+    L.marker([greenhill.lat, greenhill.lng], { icon: greenhillIcon }).addTo(map);
   </script>
 </body>
 </html>
