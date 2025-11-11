@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW NMSF – Greenhill test</title>
+  <title>DFW NMSF – Counties + Greenhill</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <link
@@ -10,11 +10,9 @@
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     crossorigin=""
   />
-
   <style>
     html, body, #map { height: 100%; margin: 0; }
 
-    /* info panel for the bar chart */
     #info {
       position: absolute;
       top: 10px;
@@ -25,7 +23,7 @@
       font: 12px/1.3 sans-serif;
       z-index: 1000;
       width: 170px;
-      display: none; /* hidden until marker is clicked */
+      display: none;
     }
     #school-name {
       margin: 0 0 8px 0;
@@ -36,26 +34,27 @@
       display: flex;
       gap: 6px;
       align-items: flex-end;
-      height: 140px; /* max bar height */
+      height: 140px;
       margin-bottom: 6px;
     }
-    .bar-group {
-      text-align: center;
-      width: 30px;
-    }
+    .bar-group { text-align: center; width: 30px; }
     .bar {
       width: 100%;
       background: #1f78b4;
       transition: height 0.15s ease-out;
     }
-    .year-label {
-      font-size: 10px;
-      display: block;
-      margin-top: 3px;
-    }
-    #total {
-      font-size: 11px;
-      color: #555;
+    .year-label { font-size: 10px; display: block; margin-top: 3px; }
+    #total { font-size: 11px; color: #555; }
+
+    #error {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: #fff;
+      border: 1px solid #c00;
+      padding: 6px 10px;
+      font: 12px sans-serif;
+      display: none;
+      z-index: 1000;
     }
   </style>
 </head>
@@ -83,17 +82,58 @@
     </div>
     <p id="total"></p>
   </div>
+  <div id="error"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
-    // base map
-    const map = L.map('map').setView([32.94, -96.8463], 12);
+    // 1. base map centered on DFW
+    const map = L.map('map').setView([32.9, -97.0], 9);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // your school data
+    const wantedFips = ['48085','48113','48121','48439']; // Collin, Dallas, Denton, Tarrant
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    // 2. load and draw counties
+    fetch('tx-counties.geojson')
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(data => {
+        const countiesLayer = L.geoJSON(data, {
+          filter: f => {
+            const p = f.properties || {};
+            return wantedFips.includes(p.FIPS);
+          },
+          style: {
+            color: '#555',
+            weight: 2,
+            fillColor: '#cccccc',
+            fillOpacity: 0.1
+          },
+          onEachFeature: (f, layer) => {
+            layer.bindPopup(f.properties.COUNTY || 'County');
+          }
+        }).addTo(map);
+
+        if (countiesLayer.getLayers().length > 0) {
+          map.fitBounds(countiesLayer.getBounds());
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showError('Could not load tx-counties.geojson.');
+      });
+
+    // 3. your test school
     const greenhill = {
       name: 'Greenhill School (Addison, TX)',
       lat: 32.941856,
@@ -107,17 +147,17 @@
     };
 
     // add marker
-    const marker = L.marker([greenhill.lat, greenhill.lng]).addTo(map);
-    marker.bindTooltip(greenhill.name);
+    const m = L.marker([greenhill.lat, greenhill.lng]).addTo(map);
+    m.bindTooltip(greenhill.name);
 
-    // max value for scaling
+    // scale bars
     const maxVal = Math.max(
       greenhill.semis[2022],
       greenhill.semis[2023],
       greenhill.semis[2024],
       greenhill.semis[2025]
     );
-    const maxPx = 120; // tallest bar in pixels
+    const maxPx = 120;
 
     function setBar(id, value) {
       const h = (value / maxVal) * maxPx;
@@ -132,15 +172,12 @@
       setBar('bar-2024', s.semis[2024]);
       setBar('bar-2025', s.semis[2025]);
       const total = s.semis[2022] + s.semis[2023] + s.semis[2024] + s.semis[2025];
-      document.getElementById('total').textContent = 'Total (2022–2025): ' + total;
+      document.getElementById('total').textContent = 'Total 2022–2025: ' + total;
       document.getElementById('info').style.display = 'block';
     }
 
     // show on click
-    marker.on('click', () => showSchool(greenhill));
-
-    // optional: show on hover instead of click
-    // marker.on('mouseover', () => showSchool(greenhill));
+    m.on('click', () => showSchool(greenhill));
   </script>
 </body>
 </html>
