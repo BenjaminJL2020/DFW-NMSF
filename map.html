@@ -13,34 +13,37 @@
   <style>
     html, body, #map { height: 100%; margin: 0; }
 
-    /* custom bar marker */
+    /* marker container, no background */
     .nmsf-marker {
-      /* no background */
       background: transparent;
       border: none;
-      /* center the bars over the point */
-      transform: translate(-12px, -40px); /* adjust to taste */
     }
-    .nmsf-chart {
-      display: flex;
-      gap: 2px;
-      align-items: flex-end;
-      height: 40px;  /* overall bar height */
-    }
-    .nmsf-bar {
-      width: 6px;             /* narrower bars */
-      background: rgba(31, 120, 180, 0.55); /* semi-transparent */
-      border-radius: 2px 2px 0 0;
-    }
+
+    /* label above bars */
     .nmsf-label {
       font-size: 10px;
       color: #000;
       text-shadow: 0 1px 2px #fff;
-      margin-bottom: 2px;
       text-align: center;
+      margin-bottom: 2px;
+      line-height: 1.1;
     }
 
-    /* simple error box for GeoJSON failures */
+    /* horizontal bar group */
+    .nmsf-chart {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      height: 40px;       /* tallest bar */
+      justify-content: center;
+    }
+
+    .nmsf-bar {
+      width: 6px;         /* narrow */
+      background: rgba(31, 120, 180, 0.55); /* semi-transparent */
+      border-radius: 2px 2px 0 0;
+    }
+
     #error {
       position: absolute;
       top: 10px; left: 10px;
@@ -59,15 +62,15 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
-    // 1. base map
+    // base map
     const map = L.map('map').setView([32.9, -97.0], 9);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // 2. draw the four counties (same as before)
-    const wantedFips = ['48085','48113','48121','48439']; // Collin, Dallas, Denton, Tarrant
+    // counties
+    const wantedFips = ['48085','48113','48121','48439'];
 
     function showError(msg) {
       const el = document.getElementById('error');
@@ -82,21 +85,14 @@
       })
       .then(data => {
         const countiesLayer = L.geoJSON(data, {
-          filter: f => {
-            const p = f.properties || {};
-            return wantedFips.includes(p.FIPS);
-          },
+          filter: f => (f.properties || {})?.FIPS && wantedFips.includes(f.properties.FIPS),
           style: {
             color: '#555',
             weight: 2,
             fillColor: '#cccccc',
             fillOpacity: 0.1
-          },
-          onEachFeature: (f, layer) => {
-            layer.bindPopup(f.properties.COUNTY || 'County');
           }
         }).addTo(map);
-
         if (countiesLayer.getLayers().length > 0) {
           map.fitBounds(countiesLayer.getBounds());
         }
@@ -106,20 +102,15 @@
         showError('Could not load tx-counties.geojson.');
       });
 
-    // 3. Greenhill data
+    // school
     const greenhill = {
       name: 'Greenhill School',
       lat: 32.941856,
       lng: -96.8463216,
-      semis: {
-        2022: 6,
-        2023: 8,
-        2024: 10,
-        2025: 10
-      }
+      semis: { 2022: 6, 2023: 8, 2024: 10, 2025: 10 }
     };
 
-    // scale bars to max
+    // scale
     const maxVal = Math.max(
       greenhill.semis[2022],
       greenhill.semis[2023],
@@ -132,7 +123,7 @@
       return Math.max(2, (v / maxVal) * maxPx);
     }
 
-    // build HTML for the custom marker
+    // build marker HTML
     const markerHtml = `
       <div class="nmsf-label">${greenhill.name}</div>
       <div class="nmsf-chart">
@@ -143,10 +134,12 @@
       </div>
     `;
 
+    // give the icon a concrete size and anchor so Leaflet won't clip it
     const greenhillIcon = L.divIcon({
       className: 'nmsf-marker',
       html: markerHtml,
-      iconSize: [0, 0] // let content size itself
+      iconSize: [90, 60],     // width, height
+      iconAnchor: [45, 60]    // bottom-center
     });
 
     L.marker([greenhill.lat, greenhill.lng], { icon: greenhillIcon }).addTo(map);
