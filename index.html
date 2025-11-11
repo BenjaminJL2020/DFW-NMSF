@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW NMSF – pinned graphs</title>
+  <title>DFW NMSF – pinned graphs + filters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link
     rel="stylesheet"
@@ -12,47 +12,40 @@
   <style>
     html, body, #map { height: 100%; margin: 0; }
 
-    /* the actual Leaflet icon root; keep tiny */
     .nmsf-marker {
       width: 1px;
       height: 1px;
       background: transparent;
       position: relative;
     }
-
-    /* we pin the graph here, bottom-left at the map point */
     .nmsf-wrapper {
       position: absolute;
       bottom: 0;
       left: 0;
-      transform: translate(-50%, 0); /* center horizontally on the point */
+      transform: translate(-50%, 0);
       display: flex;
       flex-direction: column;
       align-items: center;
       pointer-events: auto;
     }
-
     .nmsf-chart {
       display: flex;
       gap: 4px;
       align-items: flex-end;
       justify-content: center;
     }
-
     .nmsf-bar-wrap {
       position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
-
     .nmsf-bar {
       background: rgba(31, 120, 180, 0.7);
       border-radius: 3px 3px 0 0;
       cursor: default;
       transition: filter 0.1s;
     }
-
     .nmsf-top-label {
       position: absolute;
       bottom: 100%;
@@ -67,7 +60,6 @@
       display: none;
       pointer-events: none;
     }
-
     .nmsf-bottom-label {
       position: absolute;
       top: 100%;
@@ -81,16 +73,13 @@
       display: none;
       pointer-events: none;
     }
-
     .nmsf-bar-wrap:hover .nmsf-top-label,
     .nmsf-bar-wrap:hover .nmsf-bottom-label {
       display: block;
     }
-
     .nmsf-bar-wrap:hover .nmsf-bar {
       filter: brightness(1.15);
     }
-
     .nmsf-label {
       margin-top: 4px;
       font-size: 13px;
@@ -121,16 +110,40 @@
       font: 12px sans-serif;
       z-index: 1000;
     }
+
+    /* control panel */
+    #controls {
+      position: absolute;
+      top: 50px;
+      left: 10px;
+      background: rgba(255,255,255,0.93);
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      padding: 6px 8px;
+      font: 12px sans-serif;
+      z-index: 1000;
+    }
+    #controls label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="error"></div>
   <div id="zoom-level">Zoom: …</div>
+  <div id="controls">
+    <label><input type="checkbox" id="chk-public" checked> Public Schools</label>
+    <label><input type="checkbox" id="chk-private" checked> Private Schools</label>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
-    // map
     const map = L.map('map').setView([32.9, -97.0], 9);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -140,8 +153,8 @@
 
     const zoomEl = document.getElementById('zoom-level');
     function updateZoomLabel() { zoomEl.textContent = 'Zoom: ' + map.getZoom(); }
-    map.on('zoomend', updateZoomLabel);
-    map.whenReady(updateZoomLabel);
+    map.on('zoomend', () => { updateZoomLabel(); updateBarsForZoom(); });
+    map.whenReady(() => { updateZoomLabel(); updateBarsForZoom(); });
 
     const wantedFips = ['48085','48113','48121','48439'];
     function showError(msg) {
@@ -150,7 +163,7 @@
       el.style.display = 'block';
     }
 
-    // counties (click to highlight)
+    // counties
     let selectedLayer = null;
     let selectedTooltip = null;
     const countyFillByFips = {
@@ -192,17 +205,16 @@
               }
               clearCountySelection();
               const fips = feature.properties.FIPS;
-              const fill = countyFillByFips[fips] || 'rgba(0,0,255,0.3)';
-              layer.setStyle({ fillColor: fill, fillOpacity: 0.45 });
+              layer.setStyle({ fillColor: countyFillByFips[fips] || 'rgba(0,0,255,0.3)', fillOpacity: 0.45 });
               selectedLayer = layer;
+
               const center = layer.getBounds().getCenter();
-              const name = feature.properties.COUNTY || 'County';
               selectedTooltip = L.tooltip({
                 permanent: true,
                 direction: 'right',
                 offset: [12, 0]
               })
-                .setContent('<strong style="font-size:14px;">' + name + '</strong>')
+                .setContent('<strong style="font-size:14px;">' + (feature.properties.COUNTY || 'County') + '</strong>')
                 .setLatLng(center)
                 .addTo(map);
               layer.bringToFront();
@@ -237,7 +249,7 @@
       }
     ];
 
-    // global scale
+    // global scaling
     const allVals = [];
     schools.forEach(s => {
       allVals.push(s.semis[2022], s.semis[2023], s.semis[2024], s.semis[2025]);
@@ -246,83 +258,63 @@
     const COLOR_PUBLIC = 'rgba(31, 120, 180, 0.7)';
     const COLOR_PRIVATE = 'rgba(128, 0, 128, 0.7)';
 
-    // vertical per zoom
     function maxHeightForZoom(z) {
-      if (z >= 19) return 300;
-      if (z === 18) return 275;
-      if (z === 17) return 250;
-      if (z === 16) return 225;
-      if (z === 15) return 200;
-      if (z === 14) return 175;
-      if (z === 13) return 150;
-      if (z === 12) return 125;
-      if (z === 11) return 100;
-      if (z === 10) return 75;
-      if (z <= 9) return 50;
+      if (z >= 19) return 600;
+      if (z === 18) return 550;
+      if (z === 17) return 500;
+      if (z === 16) return 450;
+      if (z === 15) return 400;
+      if (z === 14) return 350;
+      if (z === 13) return 300;
+      if (z === 12) return 250;
+      if (z === 11) return 200;
+      if (z === 10) return 100;
+      if (z === 9) return 50;
       return 50;
     }
-
-    // horizontal per zoom
     function barWidthForZoom(z) {
-      if (z >= 19) return 11;
-      if (z === 18) return 10;
-      if (z === 17) return 10;
-      if (z === 16) return 9;
-      if (z === 15) return 9;
-      if (z === 14) return 8;
-      if (z === 13) return 8;
-      if (z === 12) return 7;
-      if (z === 11) return 7;
-      if (z === 10) return 6;
-      if (z <= 9) return 6;
-      return 6;
+      if (z >= 19) return 26;
+      if (z === 18) return 25;
+      if (z === 17) return 24;
+      if (z === 16) return 23;
+      if (z === 15) return 22;
+      if (z === 14) return 21;
+      if (z === 13) return 20;
+      if (z === 12) return 19;
+      if (z === 11) return 18;
+      if (z === 10) return 17;
+      if (z === 9) return 16;
+      return 16;
     }
 
-    // store icon DOM
-    const schoolIcons = [];
+    // store markers to toggle
+    const schoolMarkers = []; // {school, marker, iconEl}
 
     function createSchoolMarker(school, idx) {
       const barColor = school.type === 'private' ? COLOR_PRIVATE : COLOR_PUBLIC;
-
       const html = `
         <div class="nmsf-wrapper" data-school="${idx}">
           <div class="nmsf-chart">
-            <div class="nmsf-bar-wrap">
-              <div class="nmsf-top-label">${school.semis[2022]} NMSF</div>
-              <div class="nmsf-bar" data-school="${idx}" data-year="2022" style="background:${barColor};"></div>
-              <div class="nmsf-bottom-label">2022</div>
-            </div>
-            <div class="nmsf-bar-wrap">
-              <div class="nmsf-top-label">${school.semis[2023]} NMSF</div>
-              <div class="nmsf-bar" data-school="${idx}" data-year="2023" style="background:${barColor};"></div>
-              <div class="nmsf-bottom-label">2023</div>
-            </div>
-            <div class="nmsf-bar-wrap">
-              <div class="nmsf-top-label">${school.semis[2024]} NMSF</div>
-              <div class="nmsf-bar" data-school="${idx}" data-year="2024" style="background:${barColor};"></div>
-              <div class="nmsf-bottom-label">2024</div>
-            </div>
-            <div class="nmsf-bar-wrap">
-              <div class="nmsf-top-label">${school.semis[2025]} NMSF</div>
-              <div class="nmsf-bar" data-school="${idx}" data-year="2025" style="background:${barColor};"></div>
-              <div class="nmsf-bottom-label">2025</div>
-            </div>
+            ${[2022, 2023, 2024, 2025].map(y => `
+              <div class="nmsf-bar-wrap">
+                <div class="nmsf-top-label">${school.semis[y]} NMSF</div>
+                <div class="nmsf-bar" data-school="${idx}" data-year="${y}" style="background:${barColor};"></div>
+                <div class="nmsf-bottom-label">${y}</div>
+              </div>
+            `).join('')}
           </div>
           <div class="nmsf-label">${school.name}</div>
         </div>
       `;
-
       const icon = L.divIcon({
         className: 'nmsf-marker',
         html,
-        iconSize: [1, 1],     // critical: keep tiny so Leaflet anchors at the point
+        iconSize: [1, 1],
         iconAnchor: [0, 0]
       });
-
       const marker = L.marker([school.lat, school.lng], { icon }).addTo(map);
-      schoolIcons.push({ school, iconEl: marker._icon });
+      schoolMarkers.push({ school, marker, iconEl: marker._icon });
     }
-
     schools.forEach((s, i) => createSchoolMarker(s, i));
 
     function updateBarsForZoom() {
@@ -330,7 +322,7 @@
       const maxH = maxHeightForZoom(z);
       const barW = barWidthForZoom(z);
 
-      schoolIcons.forEach(({ school, iconEl }, idx) => {
+      schoolMarkers.forEach(({ school, iconEl }, idx) => {
         if (!iconEl) return;
         const bars = iconEl.querySelectorAll('.nmsf-bar[data-school="' + idx + '"]');
         bars.forEach(bar => {
@@ -343,8 +335,23 @@
       });
     }
 
-    map.whenReady(updateBarsForZoom);
-    map.on('zoomend', updateBarsForZoom);
+    // filtering
+    const chkPublic = document.getElementById('chk-public');
+    const chkPrivate = document.getElementById('chk-private');
+
+    function applyFilters() {
+      schoolMarkers.forEach(({ school, marker }) => {
+        if (school.type === 'public') {
+          marker._icon.style.display = chkPublic.checked ? 'block' : 'none';
+        } else {
+          marker._icon.style.display = chkPrivate.checked ? 'block' : 'none';
+        }
+      });
+    }
+
+    chkPublic.addEventListener('change', applyFilters);
+    chkPrivate.addEventListener('change', applyFilters);
+    map.whenReady(applyFilters);
   </script>
 </body>
 </html>
