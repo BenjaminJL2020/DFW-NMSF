@@ -13,35 +13,84 @@
   <style>
     html, body, #map { height: 100%; margin: 0; }
 
-    /* marker container, no background */
     .nmsf-marker {
       background: transparent;
       border: none;
     }
 
-    /* label above bars */
+    /* bigger, bold, more visible label */
     .nmsf-label {
-      font-size: 10px;
-      color: #000;
-      text-shadow: 0 1px 2px #fff;
+      font-size: 12px;
+      font-weight: 700;
+      color: #0b3d91; /* dark blue for contrast */
+      text-shadow: 0 1px 3px #fff;
       text-align: center;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
       line-height: 1.1;
+      white-space: nowrap;
     }
 
-    /* horizontal bar group */
+    /* chart container */
     .nmsf-chart {
       display: flex;
-      gap: 2px;
+      gap: 3px;
       align-items: flex-end;
-      height: 40px;       /* tallest bar */
+      height: 60px;              /* 50% bigger than 40px */
       justify-content: center;
+      position: relative;
+    }
+
+    /* each bar is in its own wrapper so we can show hover labels */
+    .nmsf-bar-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .nmsf-bar {
-      width: 6px;         /* narrow */
-      background: rgba(31, 120, 180, 0.55); /* semi-transparent */
+      width: 8px;                /* slightly wider for visibility */
+      background: rgba(31, 120, 180, 0.55);
       border-radius: 2px 2px 0 0;
+      cursor: default;
+      transition: opacity 0.1s;
+    }
+
+    /* top hover label (NMSF number) */
+    .nmsf-top-label {
+      position: absolute;
+      bottom: 100%;
+      margin-bottom: 2px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 1px 3px;
+      font-size: 9px;
+      line-height: 1.2;
+      white-space: nowrap;
+      display: none;
+    }
+
+    /* bottom hover label (year) */
+    .nmsf-bottom-label {
+      margin-top: 2px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 0 3px;
+      font-size: 9px;
+      line-height: 1.1;
+      display: none;
+    }
+
+    /* show labels on hover */
+    .nmsf-bar-wrap:hover .nmsf-top-label,
+    .nmsf-bar-wrap:hover .nmsf-bottom-label {
+      display: block;
+    }
+
+    .nmsf-bar-wrap:hover .nmsf-bar {
+      opacity: 0.9;
     }
 
     #error {
@@ -85,7 +134,10 @@
       })
       .then(data => {
         const countiesLayer = L.geoJSON(data, {
-          filter: f => (f.properties || {})?.FIPS && wantedFips.includes(f.properties.FIPS),
+          filter: f => {
+            const p = f.properties || {};
+            return wantedFips.includes(p.FIPS);
+          },
           style: {
             color: '#555',
             weight: 2,
@@ -117,7 +169,7 @@
       greenhill.semis[2024],
       greenhill.semis[2025]
     );
-    const maxPx = 40; // match .nmsf-chart height
+    const maxPx = 60; // bigger chart
 
     function barHeight(v) {
       return Math.max(2, (v / maxVal) * maxPx);
@@ -127,19 +179,35 @@
     const markerHtml = `
       <div class="nmsf-label">${greenhill.name}</div>
       <div class="nmsf-chart">
-        <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2022])}px" title="2022: ${greenhill.semis[2022]}"></div>
-        <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2023])}px" title="2023: ${greenhill.semis[2023]}"></div>
-        <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2024])}px" title="2024: ${greenhill.semis[2024]}"></div>
-        <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2025])}px" title="2025: ${greenhill.semis[2025]}"></div>
+        <div class="nmsf-bar-wrap">
+          <div class="nmsf-top-label">${greenhill.semis[2022]}</div>
+          <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2022])}px"></div>
+          <div class="nmsf-bottom-label">2022</div>
+        </div>
+        <div class="nmsf-bar-wrap">
+          <div class="nmsf-top-label">${greenhill.semis[2023]}</div>
+          <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2023])}px"></div>
+          <div class="nmsf-bottom-label">2023</div>
+        </div>
+        <div class="nmsf-bar-wrap">
+          <div class="nmsf-top-label">${greenhill.semis[2024]}</div>
+          <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2024])}px"></div>
+          <div class="nmsf-bottom-label">2024</div>
+        </div>
+        <div class="nmsf-bar-wrap">
+          <div class="nmsf-top-label">${greenhill.semis[2025]}</div>
+          <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2025])}px"></div>
+          <div class="nmsf-bottom-label">2025</div>
+        </div>
       </div>
     `;
 
-    // give the icon a concrete size and anchor so Leaflet won't clip it
+    // icon with a fixed size so it doesn't get clipped
     const greenhillIcon = L.divIcon({
       className: 'nmsf-marker',
       html: markerHtml,
-      iconSize: [90, 60],     // width, height
-      iconAnchor: [45, 60]    // bottom-center
+      iconSize: [110, 85],   // wide enough for label + bars
+      iconAnchor: [55, 85]   // bottom center
     });
 
     L.marker([greenhill.lat, greenhill.lng], { icon: greenhillIcon }).addTo(map);
