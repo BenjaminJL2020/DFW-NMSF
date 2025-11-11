@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Test Map</title>
+  <title>DFW Counties</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link
     rel="stylesheet"
@@ -12,10 +12,22 @@
   />
   <style>
     html, body, #map { height: 100%; margin: 0; }
+    #error {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: #fff;
+      border: 1px solid #c00;
+      padding: 6px 10px;
+      font: 12px sans-serif;
+      display: none;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div id="error"></div>
+
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -27,6 +39,45 @@
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    const wantedFips = ['48085','48113','48121','48439']; // Collin, Dallas, Denton, Tarrant
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    fetch('tx-counties.geojson')   // must match exact filename in repo root
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(data => {
+        const layer = L.geoJSON(data, {
+          filter: f => {
+            const p = f.properties || {};
+            return wantedFips.includes(p.FIPS);
+          },
+          style: {
+            color: '#1f78b4',
+            weight: 2,
+            fillColor: '#a6cee3',
+            fillOpacity: 0.25
+          },
+          onEachFeature: (f, l) => l.bindPopup(f.properties.COUNTY || 'County')
+        }).addTo(map);
+
+        if (layer.getLayers().length > 0) {
+          map.fitBounds(layer.getBounds());
+        } else {
+          showError('GeoJSON loaded, but no features matched FIPS. Check property names.');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showError('Could not load tx-counties.geojson. Check filename and location.');
+      });
   </script>
 </body>
 </html>
