@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW NMSF – Counties + Fixed Bar</title>
+  <title>DFW NMSF – Counties + Two Schools</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link
     rel="stylesheet"
@@ -38,7 +38,6 @@
       align-items: center;
     }
 
-    /* bars 2x wide, base color */
     .nmsf-bar {
       width: 16px;
       background: rgba(31, 120, 180, 0.55);
@@ -47,11 +46,10 @@
       transition: background 0.1s;
     }
 
-    /* top label positioned away, so bar doesn't jump */
     .nmsf-top-label {
       position: absolute;
       bottom: 100%;
-      transform: translateY(-8px); /* keep away from bar top */
+      transform: translateY(-8px);
       background: rgba(255,255,255,0.95);
       border: 1px solid #aaa;
       border-radius: 3px;
@@ -63,7 +61,6 @@
       pointer-events: none;
     }
 
-    /* bottom label also away */
     .nmsf-bottom-label {
       position: absolute;
       top: 100%;
@@ -78,13 +75,11 @@
       pointer-events: none;
     }
 
-    /* show both on hover */
     .nmsf-bar-wrap:hover .nmsf-top-label,
     .nmsf-bar-wrap:hover .nmsf-bottom-label {
       display: block;
     }
 
-    /* bar changes color on hover */
     .nmsf-bar-wrap:hover .nmsf-bar {
       background: rgba(220, 50, 47, 0.75);
     }
@@ -126,7 +121,7 @@
     // scale
     L.control.scale().addTo(map);
 
-    const wantedFips = ['48085','48113','48121','48439']; // Collin, Dallas, Denton, Tarrant
+    const wantedFips = ['48085','48113','48121','48439'];
 
     function showError(msg) {
       const el = document.getElementById('error');
@@ -134,11 +129,10 @@
       el.style.display = 'block';
     }
 
-    // keep track of selected county
+    // county selection
     let selectedLayer = null;
     let selectedTooltip = null;
 
-    // distinct fill colors for the four counties
     const countyFillByFips = {
       '48113': 'rgba(0, 123, 255, 0.45)',   // Dallas
       '48439': 'rgba(40, 167, 69, 0.45)',   // Tarrant
@@ -157,7 +151,6 @@
       }
     }
 
-    // load counties
     fetch('tx-counties.geojson')
       .then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -174,32 +167,26 @@
           },
           onEachFeature: (feature, layer) => {
             layer.on('click', (e) => {
-              // prevent map-click from firing
               L.DomEvent.stopPropagation(e);
 
-              // if re-clicking the selected county, clear
               if (selectedLayer === layer) {
                 clearCountySelection();
                 return;
               }
 
-              // clear previous
               clearCountySelection();
 
-              // set this one
               const fips = feature.properties.FIPS;
               const fill = countyFillByFips[fips] || 'rgba(0,0,255,0.3)';
               layer.setStyle({ fillColor: fill, fillOpacity: 0.45 });
               selectedLayer = layer;
 
-              // add label next to polygon
               const center = layer.getBounds().getCenter();
               const name = feature.properties.COUNTY || 'County';
               selectedTooltip = L.tooltip({
                 permanent: true,
                 direction: 'right',
-                offset: [12, 0],
-                className: 'county-label-tooltip'
+                offset: [12, 0]
               })
               .setContent('<strong style="font-size:14px;">' + name + '</strong>')
               .setLatLng(center)
@@ -214,7 +201,6 @@
           map.fitBounds(countiesLayer.getBounds());
         }
 
-        // clicking anywhere else clears selection
         map.on('click', () => {
           clearCountySelection();
         });
@@ -224,59 +210,77 @@
         showError('Could not load tx-counties.geojson.');
       });
 
-    // school data
-    const greenhill = {
-      name: 'Greenhill School',
-      lat: 32.941856,
-      lng: -96.8463216,
-      semis: { 2022: 6, 2023: 8, 2024: 10, 2025: 10 }
-    };
+    // ------- schools -------
+    const schools = [
+      {
+        name: 'Greenhill School',
+        lat: 32.941856,
+        lng: -96.8463216,
+        semis: { 2022: 6, 2023: 8, 2024: 10, 2025: 10 }
+      },
+      {
+        name: 'Allen H.S.',
+        lat: 33.1096682,
+        lng: -96.6633394,
+        semis: { 2022: 31, 2023: 43, 2024: 42, 2025: 26 }
+      }
+    ];
 
-    // fixed-size graph: 10 NMSF = 100px
-    const MAX_NMSF = 10;
-    const MAX_BAR_PX = 100;
+    // create a marker with scaled bars for one school
+    function createSchoolMarker(school) {
+      // find this school's max to keep graph reasonable
+      const vals = [
+        school.semis[2022],
+        school.semis[2023],
+        school.semis[2024],
+        school.semis[2025]
+      ];
+      const maxVal = Math.max.apply(null, vals);
+      const MAX_BAR_PX = 100; // tallest bar = 100px
 
-    function barHeight(val) {
-      return Math.max(4, (val / MAX_NMSF) * MAX_BAR_PX);
+      function h(v) {
+        return Math.max(4, (v / maxVal) * MAX_BAR_PX);
+      }
+
+      const html = `
+        <div class="nmsf-wrapper">
+          <div class="nmsf-chart">
+            <div class="nmsf-bar-wrap">
+              <div class="nmsf-top-label">${school.semis[2022]} NMSF</div>
+              <div class="nmsf-bar" style="height:${h(school.semis[2022])}px"></div>
+              <div class="nmsf-bottom-label">2022</div>
+            </div>
+            <div class="nmsf-bar-wrap">
+              <div class="nmsf-top-label">${school.semis[2023]} NMSF</div>
+              <div class="nmsf-bar" style="height:${h(school.semis[2023])}px"></div>
+              <div class="nmsf-bottom-label">2023</div>
+            </div>
+            <div class="nmsf-bar-wrap">
+              <div class="nmsf-top-label">${school.semis[2024]} NMSF</div>
+              <div class="nmsf-bar" style="height:${h(school.semis[2024])}px"></div>
+              <div class="nmsf-bottom-label">2024</div>
+            </div>
+            <div class="nmsf-bar-wrap">
+              <div class="nmsf-top-label">${school.semis[2025]} NMSF</div>
+              <div class="nmsf-bar" style="height:${h(school.semis[2025])}px"></div>
+              <div class="nmsf-bottom-label">2025</div>
+            </div>
+          </div>
+          <div class="nmsf-label">${school.name}</div>
+        </div>
+      `;
+
+      const icon = L.divIcon({
+        className: 'nmsf-marker',
+        html,
+        iconSize: [200, 180],
+        iconAnchor: [100, 180]
+      });
+
+      return L.marker([school.lat, school.lng], { icon }).addTo(map);
     }
 
-    const markerHtml = `
-      <div class="nmsf-wrapper">
-        <div class="nmsf-chart">
-          <div class="nmsf-bar-wrap">
-            <div class="nmsf-top-label">${greenhill.semis[2022]} NMSF</div>
-            <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2022])}px"></div>
-            <div class="nmsf-bottom-label">2022</div>
-          </div>
-          <div class="nmsf-bar-wrap">
-            <div class="nmsf-top-label">${greenhill.semis[2023]} NMSF</div>
-            <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2023])}px"></div>
-            <div class="nmsf-bottom-label">2023</div>
-          </div>
-          <div class="nmsf-bar-wrap">
-            <div class="nmsf-top-label">${greenhill.semis[2024]} NMSF</div>
-            <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2024])}px"></div>
-            <div class="nmsf-bottom-label">2024</div>
-          </div>
-          <div class="nmsf-bar-wrap">
-            <div class="nmsf-top-label">${greenhill.semis[2025]} NMSF</div>
-            <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2025])}px"></div>
-            <div class="nmsf-bottom-label">2025</div>
-          </div>
-        </div>
-        <div class="nmsf-label">${greenhill.name}</div>
-      </div>
-    `;
-
-    // enough room for wider bars and 100px height
-    const greenhillIcon = L.divIcon({
-      className: 'nmsf-marker',
-      html: markerHtml,
-      iconSize: [180, 160],
-      iconAnchor: [90, 160]
-    });
-
-    L.marker([greenhill.lat, greenhill.lng], { icon: greenhillIcon }).addTo(map);
+    schools.forEach(createSchoolMarker);
   </script>
 </body>
 </html>
