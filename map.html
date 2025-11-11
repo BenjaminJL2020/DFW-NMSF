@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW NMSF – minimal working</title>
+  <title>DFW NMSF – schools + counties</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link
     rel="stylesheet"
@@ -12,7 +12,6 @@
   <style>
     html, body, #map { height: 100%; margin: 0; }
 
-    /* tiny icon; real content is absolutely positioned */
     .nmsf-marker {
       width: 1px;
       height: 1px;
@@ -91,7 +90,6 @@
       z-index: 1000;
     }
 
-    /* bottom-center panel */
     #controls {
       position: absolute;
       bottom: 10px;
@@ -108,6 +106,17 @@
       display: block;
       margin-bottom: 4px;
     }
+
+    #error {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: #fff;
+      border: 1px solid #c00;
+      padding: 6px 10px;
+      font: 12px sans-serif;
+      display: none;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
@@ -117,6 +126,7 @@
     <label><input type="checkbox" id="chk-public" checked> Public Schools</label>
     <label><input type="checkbox" id="chk-private" checked> Private Schools</label>
   </div>
+  <div id="error"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
@@ -131,7 +141,80 @@
     const zoomEl = document.getElementById('zoom-level');
     function updateZoomLabel() { zoomEl.textContent = 'Zoom: ' + map.getZoom(); }
 
-    // 2) data
+    // 2) county layer (re-added)
+    const wantedFips = ['48085','48113','48121','48439']; // Collin, Dallas, Denton, Tarrant
+    let selectedCountyLayer = null;
+    let selectedCountyTooltip = null;
+
+    function clearCountySelection() {
+      if (selectedCountyLayer) {
+        selectedCountyLayer.setStyle({ fillOpacity: 0.1, fillColor: '#cccccc' });
+        selectedCountyLayer = null;
+      }
+      if (selectedCountyTooltip) {
+        map.removeLayer(selectedCountyTooltip);
+        selectedCountyTooltip = null;
+      }
+    }
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    fetch('tx-counties.geojson')
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(geo => {
+        const countyLayer = L.geoJSON(geo, {
+          filter: f => f.properties && wantedFips.includes(f.properties.FIPS),
+          style: {
+            color: '#555',
+            weight: 2,
+            fillColor: '#cccccc',
+            fillOpacity: 0.1
+          },
+          onEachFeature: (f, layer) => {
+            layer.on('click', e => {
+              L.DomEvent.stopPropagation(e);
+              if (selectedCountyLayer === layer) {
+                clearCountySelection();
+                return;
+              }
+              clearCountySelection();
+              layer.setStyle({ fillColor: 'rgba(0,0,255,0.3)', fillOpacity: 0.35 });
+              selectedCountyLayer = layer;
+
+              const center = layer.getBounds().getCenter();
+              selectedCountyTooltip = L.tooltip({
+                permanent: true,
+                direction: 'right',
+                offset: [12, 0]
+              })
+              .setContent('<strong style="font-size:14px;">' + (f.properties.COUNTY || 'County') + '</strong>')
+              .setLatLng(center)
+              .addTo(map);
+
+              layer.bringToFront();
+            });
+          }
+        }).addTo(map);
+
+        // fit to the four counties
+        if (countyLayer.getLayers().length > 0) {
+          map.fitBounds(countyLayer.getBounds());
+        }
+
+        map.on('click', () => clearCountySelection());
+      })
+      .catch(err => {
+        console.error(err);
+        showError('Could not load tx-counties.geojson.');
+      });
+
+    // 3) school data
     const schools = [
       {
         name: 'Greenhill School',
@@ -148,6 +231,8 @@
         semis: { 2022: 31, 2023: 43, 2024: 42, 2025: 26 }
       }
     ];
+
+    // global scale
     const allVals = [];
     schools.forEach(s => {
       allVals.push(s.semis[2022], s.semis[2023], s.semis[2024], s.semis[2025]);
@@ -156,7 +241,7 @@
     const COLOR_PUBLIC = 'rgba(31, 120, 180, 0.7)';
     const COLOR_PRIVATE = 'rgba(128, 0, 128, 0.7)';
 
-    // 3) zoom → bar sizes
+    // zoom → height
     function maxHeightForZoom(z) {
       if (z >= 19) return 600;
       if (z === 18) return 550;
@@ -171,6 +256,7 @@
       if (z === 9) return 50;
       return 50;
     }
+    // zoom → width
     function barWidthForZoom(z) {
       if (z >= 19) return 26;
       if (z === 18) return 25;
@@ -186,10 +272,10 @@
       return 16;
     }
 
-    // 4) make markers
+    // 4) add school markers
     const schoolMarkers = []; // {school, marker, iconEl}
+
     function makeSchoolHTML(school, idx, color) {
-      // build bars simply to avoid syntax errors
       const y = school.semis;
       return (
         '<div class="nmsf-wrapper" data-school="' + idx + '">' +
@@ -252,6 +338,7 @@
     // 5) filters
     const chkPublic = document.getElementById('chk-public');
     const chkPrivate = document.getElementById('chk-private');
+
     function applyFilters() {
       schoolMarkers.forEach(({ school, marker }) => {
         if (school.type === 'public') {
@@ -261,13 +348,19 @@
         }
       });
     }
+
     chkPublic.addEventListener('change', applyFilters);
     chkPrivate.addEventListener('change', applyFilters);
 
+    map.on('zoomend', () => {
+      updateZoomLabel();
+      updateBarsForZoom();
+    });
+
     map.whenReady(() => {
+      updateZoomLabel();
       updateBarsForZoom();
       applyFilters();
-      updateZoomLabel();
     });
   </script>
 </body>
