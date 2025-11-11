@@ -17,11 +17,12 @@
       border: none;
     }
 
-    /* chart on top, label below */
+    /* we will scale this whole wrapper via JS so it grows both directions */
     .nmsf-wrapper {
       display: flex;
       flex-direction: column;
       align-items: center;
+      transform-origin: bottom center;
     }
 
     .nmsf-chart {
@@ -29,7 +30,6 @@
       gap: 3px;
       align-items: flex-end;
       justify-content: center;
-      /* actual height is set dynamically via JS on each bar */
     }
 
     .nmsf-bar-wrap {
@@ -40,14 +40,13 @@
     }
 
     .nmsf-bar {
-      width: 8px;
+      width: 8px; /* base width, will get scaled */
       background: rgba(31, 120, 180, 0.55);
       border-radius: 2px 2px 0 0;
       cursor: default;
       transition: opacity 0.1s;
     }
 
-    /* top label (value) */
     .nmsf-top-label {
       position: absolute;
       bottom: 100%;
@@ -62,7 +61,6 @@
       display: none;
     }
 
-    /* bottom label (year) */
     .nmsf-bottom-label {
       margin-top: 3px;
       background: rgba(255,255,255,0.95);
@@ -83,7 +81,6 @@
       opacity: 0.9;
     }
 
-    /* label below graph, bigger and bold, high contrast */
     .nmsf-label {
       margin-top: 4px;
       font-size: 13px;
@@ -117,6 +114,9 @@
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    // add scale
+    L.control.scale().addTo(map);
 
     // four counties
     const wantedFips = ['48085','48113','48121','48439'];
@@ -159,9 +159,9 @@
       semis: { 2022: 6, 2023: 8, 2024: 10, 2025: 10 }
     };
 
-    // build icon HTML (bars will be resized via JS)
+    // build icon HTML
     const markerHtml = `
-      <div class="nmsf-wrapper">
+      <div class="nmsf-wrapper" id="nmsf-wrapper">
         <div class="nmsf-chart" id="nmsf-chart">
           <div class="nmsf-bar-wrap" data-year="2022" data-value="${greenhill.semis[2022]}">
             <div class="nmsf-top-label">${greenhill.semis[2022]} NMSF</div>
@@ -188,37 +188,42 @@
       </div>
     `;
 
+    // base icon size is arbitrary; we’ll scale contents instead
     const greenhillIcon = L.divIcon({
       className: 'nmsf-marker',
       html: markerHtml,
-      iconSize: [130, 110],
-      iconAnchor: [65, 110] // bottom center
+      iconSize: [140, 120],
+      iconAnchor: [70, 120]
     });
 
     const greenhillMarker = L.marker([greenhill.lat, greenhill.lng], { icon: greenhillIcon }).addTo(map);
 
-    // -------- dynamic scaling part --------
-    // 10 NMSF = 1 mile on screen
+    // dynamic scaling
     const greenhillLatLng = L.latLng(greenhill.lat, greenhill.lng);
     const maxNmsf = 10;
     const MILE_METERS = 1609.34;
-    const METERS_PER_DEG_LAT = 111132; // rough, good enough here
+    const METERS_PER_DEG_LAT = 111132; // approximate
+    const MIN_BAR_PX = 100;
+    const MAX_BAR_PX = 200;
+    const BASE_BAR_PX = 150; // used to compute horizontal scale relative to base
 
     function pixelsPerMileAt(latlng) {
-      // move 1 mile north in lat
       const deltaLat = MILE_METERS / METERS_PER_DEG_LAT;
       const p1 = map.latLngToContainerPoint(latlng);
       const p2 = map.latLngToContainerPoint(L.latLng(latlng.lat + deltaLat, latlng.lng));
-      const px = Math.abs(p2.y - p1.y);
-      return px;
+      return Math.abs(p2.y - p1.y);
     }
 
     function updateBarHeights() {
       const iconEl = greenhillMarker._icon;
       if (!iconEl) return;
 
-      const pxPerMile = pixelsPerMileAt(greenhillLatLng);
-      // 10 NMSF -> pxPerMile
+      // target height for 10 NMSF = 1 mile, clamped
+      let pxPerMile = pixelsPerMileAt(greenhillLatLng);
+      if (pxPerMile < MIN_BAR_PX) pxPerMile = MIN_BAR_PX;
+      if (pxPerMile > MAX_BAR_PX) pxPerMile = MAX_BAR_PX;
+
+      // vertical sizes
       const bars = [
         { id: 'bar-2022', val: greenhill.semis[2022] },
         { id: 'bar-2023', val: greenhill.semis[2023] },
@@ -232,11 +237,16 @@
           el.style.height = Math.max(4, h) + 'px';
         }
       });
+
+      // horizontal scaling: scale whole wrapper proportionally to the vertical change
+      const wrapper = iconEl.querySelector('#nmsf-wrapper');
+      if (wrapper) {
+        const scale = pxPerMile / BASE_BAR_PX; // >1 when zoomed in, <1 when zoomed out
+        wrapper.style.transform = `scale(${scale})`;
+      }
     }
 
-    // run once when map is ready
     map.whenReady(updateBarHeights);
-    // update on zoom and move (panning changes container coordinates)
     map.on('zoom', updateBarHeights);
     map.on('move', updateBarHeights);
   </script>
