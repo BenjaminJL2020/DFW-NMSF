@@ -77,4 +77,17 @@
           }
         }).addTo(map);
 
-        if (
+        if (countiesLayer.getLayers().length > 0) {
+          map.fitBounds(countiesLayer.getBounds());
+        } else {
+          showError('Loaded GeoJSON, but no features matched FIPS=48085,48113,48121,48439.');
+          console.log('Sample properties:', data.features?.[0]?.properties);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showError('Could not load tx-counties.geojson. Check filename and location.');
+      });
+  </script>
+</body>
+</html>
