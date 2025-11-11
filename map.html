@@ -2,9 +2,8 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW NMSF – Inline Bar Marker</title>
+  <title>DFW NMSF – Scaled Bar Marker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -18,29 +17,21 @@
       border: none;
     }
 
-    /* bigger, bold, more visible label */
-    .nmsf-label {
-      font-size: 12px;
-      font-weight: 700;
-      color: #0b3d91; /* dark blue for contrast */
-      text-shadow: 0 1px 3px #fff;
-      text-align: center;
-      margin-bottom: 3px;
-      line-height: 1.1;
-      white-space: nowrap;
+    /* chart on top, label below */
+    .nmsf-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    /* chart container */
     .nmsf-chart {
       display: flex;
       gap: 3px;
       align-items: flex-end;
-      height: 60px;              /* 50% bigger than 40px */
       justify-content: center;
-      position: relative;
+      /* actual height is set dynamically via JS on each bar */
     }
 
-    /* each bar is in its own wrapper so we can show hover labels */
     .nmsf-bar-wrap {
       position: relative;
       display: flex;
@@ -49,41 +40,40 @@
     }
 
     .nmsf-bar {
-      width: 8px;                /* slightly wider for visibility */
+      width: 8px;
       background: rgba(31, 120, 180, 0.55);
       border-radius: 2px 2px 0 0;
       cursor: default;
       transition: opacity 0.1s;
     }
 
-    /* top hover label (NMSF number) */
+    /* top label (value) */
     .nmsf-top-label {
       position: absolute;
       bottom: 100%;
-      margin-bottom: 2px;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid #ccc;
+      margin-bottom: 3px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #aaa;
       border-radius: 3px;
-      padding: 1px 3px;
-      font-size: 9px;
-      line-height: 1.2;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: 700;
       white-space: nowrap;
       display: none;
     }
 
-    /* bottom hover label (year) */
+    /* bottom label (year) */
     .nmsf-bottom-label {
-      margin-top: 2px;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid #ccc;
+      margin-top: 3px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #aaa;
       border-radius: 3px;
-      padding: 0 3px;
-      font-size: 9px;
-      line-height: 1.1;
+      padding: 1px 6px;
+      font-size: 11px;
+      font-weight: 700;
       display: none;
     }
 
-    /* show labels on hover */
     .nmsf-bar-wrap:hover .nmsf-top-label,
     .nmsf-bar-wrap:hover .nmsf-bottom-label {
       display: block;
@@ -91,6 +81,16 @@
 
     .nmsf-bar-wrap:hover .nmsf-bar {
       opacity: 0.9;
+    }
+
+    /* label below graph, bigger and bold, high contrast */
+    .nmsf-label {
+      margin-top: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #0b3d91;
+      text-shadow: 0 1px 3px #fff;
+      white-space: nowrap;
     }
 
     #error {
@@ -118,7 +118,7 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // counties
+    // four counties
     const wantedFips = ['48085','48113','48121','48439'];
 
     function showError(msg) {
@@ -133,11 +133,8 @@
         return r.json();
       })
       .then(data => {
-        const countiesLayer = L.geoJSON(data, {
-          filter: f => {
-            const p = f.properties || {};
-            return wantedFips.includes(p.FIPS);
-          },
+        const layer = L.geoJSON(data, {
+          filter: f => (f.properties || {}).FIPS && wantedFips.includes(f.properties.FIPS),
           style: {
             color: '#555',
             weight: 2,
@@ -145,8 +142,8 @@
             fillOpacity: 0.1
           }
         }).addTo(map);
-        if (countiesLayer.getLayers().length > 0) {
-          map.fitBounds(countiesLayer.getBounds());
+        if (layer.getLayers().length > 0) {
+          map.fitBounds(layer.getBounds());
         }
       })
       .catch(err => {
@@ -154,7 +151,7 @@
         showError('Could not load tx-counties.geojson.');
       });
 
-    // school
+    // school data
     const greenhill = {
       name: 'Greenhill School',
       lat: 32.941856,
@@ -162,55 +159,86 @@
       semis: { 2022: 6, 2023: 8, 2024: 10, 2025: 10 }
     };
 
-    // scale
-    const maxVal = Math.max(
-      greenhill.semis[2022],
-      greenhill.semis[2023],
-      greenhill.semis[2024],
-      greenhill.semis[2025]
-    );
-    const maxPx = 60; // bigger chart
-
-    function barHeight(v) {
-      return Math.max(2, (v / maxVal) * maxPx);
-    }
-
-    // build marker HTML
+    // build icon HTML (bars will be resized via JS)
     const markerHtml = `
-      <div class="nmsf-label">${greenhill.name}</div>
-      <div class="nmsf-chart">
-        <div class="nmsf-bar-wrap">
-          <div class="nmsf-top-label">${greenhill.semis[2022]}</div>
-          <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2022])}px"></div>
-          <div class="nmsf-bottom-label">2022</div>
+      <div class="nmsf-wrapper">
+        <div class="nmsf-chart" id="nmsf-chart">
+          <div class="nmsf-bar-wrap" data-year="2022" data-value="${greenhill.semis[2022]}">
+            <div class="nmsf-top-label">${greenhill.semis[2022]} NMSF</div>
+            <div class="nmsf-bar" id="bar-2022"></div>
+            <div class="nmsf-bottom-label">2022</div>
+          </div>
+          <div class="nmsf-bar-wrap" data-year="2023" data-value="${greenhill.semis[2023]}">
+            <div class="nmsf-top-label">${greenhill.semis[2023]} NMSF</div>
+            <div class="nmsf-bar" id="bar-2023"></div>
+            <div class="nmsf-bottom-label">2023</div>
+          </div>
+          <div class="nmsf-bar-wrap" data-year="2024" data-value="${greenhill.semis[2024]}">
+            <div class="nmsf-top-label">${greenhill.semis[2024]} NMSF</div>
+            <div class="nmsf-bar" id="bar-2024"></div>
+            <div class="nmsf-bottom-label">2024</div>
+          </div>
+          <div class="nmsf-bar-wrap" data-year="2025" data-value="${greenhill.semis[2025]}">
+            <div class="nmsf-top-label">${greenhill.semis[2025]} NMSF</div>
+            <div class="nmsf-bar" id="bar-2025"></div>
+            <div class="nmsf-bottom-label">2025</div>
+          </div>
         </div>
-        <div class="nmsf-bar-wrap">
-          <div class="nmsf-top-label">${greenhill.semis[2023]}</div>
-          <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2023])}px"></div>
-          <div class="nmsf-bottom-label">2023</div>
-        </div>
-        <div class="nmsf-bar-wrap">
-          <div class="nmsf-top-label">${greenhill.semis[2024]}</div>
-          <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2024])}px"></div>
-          <div class="nmsf-bottom-label">2024</div>
-        </div>
-        <div class="nmsf-bar-wrap">
-          <div class="nmsf-top-label">${greenhill.semis[2025]}</div>
-          <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2025])}px"></div>
-          <div class="nmsf-bottom-label">2025</div>
-        </div>
+        <div class="nmsf-label">${greenhill.name}</div>
       </div>
     `;
 
-    // icon with a fixed size so it doesn't get clipped
     const greenhillIcon = L.divIcon({
       className: 'nmsf-marker',
       html: markerHtml,
-      iconSize: [110, 85],   // wide enough for label + bars
-      iconAnchor: [55, 85]   // bottom center
+      iconSize: [130, 110],
+      iconAnchor: [65, 110] // bottom center
     });
 
-    L.marker([greenhill.lat, greenhill.lng], { icon: greenhillIcon }).addTo(map);
+    const greenhillMarker = L.marker([greenhill.lat, greenhill.lng], { icon: greenhillIcon }).addTo(map);
+
+    // -------- dynamic scaling part --------
+    // 10 NMSF = 1 mile on screen
+    const greenhillLatLng = L.latLng(greenhill.lat, greenhill.lng);
+    const maxNmsf = 10;
+    const MILE_METERS = 1609.34;
+    const METERS_PER_DEG_LAT = 111132; // rough, good enough here
+
+    function pixelsPerMileAt(latlng) {
+      // move 1 mile north in lat
+      const deltaLat = MILE_METERS / METERS_PER_DEG_LAT;
+      const p1 = map.latLngToContainerPoint(latlng);
+      const p2 = map.latLngToContainerPoint(L.latLng(latlng.lat + deltaLat, latlng.lng));
+      const px = Math.abs(p2.y - p1.y);
+      return px;
+    }
+
+    function updateBarHeights() {
+      const iconEl = greenhillMarker._icon;
+      if (!iconEl) return;
+
+      const pxPerMile = pixelsPerMileAt(greenhillLatLng);
+      // 10 NMSF -> pxPerMile
+      const bars = [
+        { id: 'bar-2022', val: greenhill.semis[2022] },
+        { id: 'bar-2023', val: greenhill.semis[2023] },
+        { id: 'bar-2024', val: greenhill.semis[2024] },
+        { id: 'bar-2025', val: greenhill.semis[2025] }
+      ];
+      bars.forEach(b => {
+        const el = iconEl.querySelector('#' + b.id);
+        if (el) {
+          const h = (b.val / maxNmsf) * pxPerMile;
+          el.style.height = Math.max(4, h) + 'px';
+        }
+      });
+    }
+
+    // run once when map is ready
+    map.whenReady(updateBarHeights);
+    // update on zoom and move (panning changes container coordinates)
+    map.on('zoom', updateBarHeights);
+    map.on('move', updateBarHeights);
   </script>
 </body>
 </html>
