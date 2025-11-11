@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW NMSF – Scaled Bar Marker</title>
+  <title>DFW NMSF – Fixed Bar + Clickable Counties</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link
     rel="stylesheet"
@@ -17,7 +17,6 @@
       border: none;
     }
 
-    /* we will scale this whole wrapper via JS so it grows both directions */
     .nmsf-wrapper {
       display: flex;
       flex-direction: column;
@@ -27,9 +26,10 @@
 
     .nmsf-chart {
       display: flex;
-      gap: 3px;
+      gap: 4px;
       align-items: flex-end;
       justify-content: center;
+      /* height is not set here; each bar gets explicit height */
     }
 
     .nmsf-bar-wrap {
@@ -39,12 +39,12 @@
       align-items: center;
     }
 
+    /* 2x wider bars */
     .nmsf-bar {
-      width: 8px; /* base width, will get scaled */
+      width: 16px;
       background: rgba(31, 120, 180, 0.55);
-      border-radius: 2px 2px 0 0;
+      border-radius: 3px 3px 0 0;
       cursor: default;
-      transition: opacity 0.1s;
     }
 
     .nmsf-top-label {
@@ -77,10 +77,6 @@
       display: block;
     }
 
-    .nmsf-bar-wrap:hover .nmsf-bar {
-      opacity: 0.9;
-    }
-
     .nmsf-label {
       margin-top: 4px;
       font-size: 13px;
@@ -100,11 +96,26 @@
       display: none;
       z-index: 1000;
     }
+
+    /* county label for clicks */
+    #county-label {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font: 12px sans-serif;
+      display: none;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="error"></div>
+  <div id="county-label"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
@@ -115,11 +126,11 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // add scale
+    // show a scale
     L.control.scale().addTo(map);
 
-    // four counties
     const wantedFips = ['48085','48113','48121','48439'];
+    let selectedCounty = null;
 
     function showError(msg) {
       const el = document.getElementById('error');
@@ -127,6 +138,7 @@
       el.style.display = 'block';
     }
 
+    // clickable counties
     fetch('tx-counties.geojson')
       .then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -140,8 +152,26 @@
             weight: 2,
             fillColor: '#cccccc',
             fillOpacity: 0.1
+          },
+          onEachFeature: (feature, layer) => {
+            layer.on('click', () => {
+              // reset previous
+              if (selectedCounty) {
+                selectedCounty.setStyle({ fillOpacity: 0.1 });
+              }
+              // set this one
+              layer.setStyle({ fillOpacity: 0.35 });
+              selectedCounty = layer;
+
+              const name = feature.properties.COUNTY || 'County';
+              const label = document.getElementById('county-label');
+              label.textContent = name;
+              label.style.display = 'block';
+              layer.bringToFront();
+            });
           }
         }).addTo(map);
+
         if (layer.getLayers().length > 0) {
           map.fitBounds(layer.getBounds());
         }
@@ -159,28 +189,35 @@
       semis: { 2022: 6, 2023: 8, 2024: 10, 2025: 10 }
     };
 
-    // build icon HTML
+    // fixed-height graph: 10 NMSF = 100px
+    const MAX_NMSF = 10;
+    const MAX_BAR_PX = 100;
+
+    function barHeight(val) {
+      return Math.max(4, (val / MAX_NMSF) * MAX_BAR_PX);
+    }
+
     const markerHtml = `
       <div class="nmsf-wrapper" id="nmsf-wrapper">
-        <div class="nmsf-chart" id="nmsf-chart">
-          <div class="nmsf-bar-wrap" data-year="2022" data-value="${greenhill.semis[2022]}">
+        <div class="nmsf-chart">
+          <div class="nmsf-bar-wrap">
             <div class="nmsf-top-label">${greenhill.semis[2022]} NMSF</div>
-            <div class="nmsf-bar" id="bar-2022"></div>
+            <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2022])}px"></div>
             <div class="nmsf-bottom-label">2022</div>
           </div>
-          <div class="nmsf-bar-wrap" data-year="2023" data-value="${greenhill.semis[2023]}">
+          <div class="nmsf-bar-wrap">
             <div class="nmsf-top-label">${greenhill.semis[2023]} NMSF</div>
-            <div class="nmsf-bar" id="bar-2023"></div>
+            <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2023])}px"></div>
             <div class="nmsf-bottom-label">2023</div>
           </div>
-          <div class="nmsf-bar-wrap" data-year="2024" data-value="${greenhill.semis[2024]}">
+          <div class="nmsf-bar-wrap">
             <div class="nmsf-top-label">${greenhill.semis[2024]} NMSF</div>
-            <div class="nmsf-bar" id="bar-2024"></div>
+            <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2024])}px"></div>
             <div class="nmsf-bottom-label">2024</div>
           </div>
-          <div class="nmsf-bar-wrap" data-year="2025" data-value="${greenhill.semis[2025]}">
+          <div class="nmsf-bar-wrap">
             <div class="nmsf-top-label">${greenhill.semis[2025]} NMSF</div>
-            <div class="nmsf-bar" id="bar-2025"></div>
+            <div class="nmsf-bar" style="height:${barHeight(greenhill.semis[2025])}px"></div>
             <div class="nmsf-bottom-label">2025</div>
           </div>
         </div>
@@ -188,67 +225,15 @@
       </div>
     `;
 
-    // base icon size is arbitrary; we’ll scale contents instead
+    // since size is now constant, give the icon enough room and anchor at bottom center
     const greenhillIcon = L.divIcon({
       className: 'nmsf-marker',
       html: markerHtml,
-      iconSize: [140, 120],
-      iconAnchor: [70, 120]
+      iconSize: [160, 140],
+      iconAnchor: [80, 140]
     });
 
-    const greenhillMarker = L.marker([greenhill.lat, greenhill.lng], { icon: greenhillIcon }).addTo(map);
-
-    // dynamic scaling
-    const greenhillLatLng = L.latLng(greenhill.lat, greenhill.lng);
-    const maxNmsf = 10;
-    const MILE_METERS = 1609.34;
-    const METERS_PER_DEG_LAT = 111132; // approximate
-    const MIN_BAR_PX = 100;
-    const MAX_BAR_PX = 200;
-    const BASE_BAR_PX = 150; // used to compute horizontal scale relative to base
-
-    function pixelsPerMileAt(latlng) {
-      const deltaLat = MILE_METERS / METERS_PER_DEG_LAT;
-      const p1 = map.latLngToContainerPoint(latlng);
-      const p2 = map.latLngToContainerPoint(L.latLng(latlng.lat + deltaLat, latlng.lng));
-      return Math.abs(p2.y - p1.y);
-    }
-
-    function updateBarHeights() {
-      const iconEl = greenhillMarker._icon;
-      if (!iconEl) return;
-
-      // target height for 10 NMSF = 1 mile, clamped
-      let pxPerMile = pixelsPerMileAt(greenhillLatLng);
-      if (pxPerMile < MIN_BAR_PX) pxPerMile = MIN_BAR_PX;
-      if (pxPerMile > MAX_BAR_PX) pxPerMile = MAX_BAR_PX;
-
-      // vertical sizes
-      const bars = [
-        { id: 'bar-2022', val: greenhill.semis[2022] },
-        { id: 'bar-2023', val: greenhill.semis[2023] },
-        { id: 'bar-2024', val: greenhill.semis[2024] },
-        { id: 'bar-2025', val: greenhill.semis[2025] }
-      ];
-      bars.forEach(b => {
-        const el = iconEl.querySelector('#' + b.id);
-        if (el) {
-          const h = (b.val / maxNmsf) * pxPerMile;
-          el.style.height = Math.max(4, h) + 'px';
-        }
-      });
-
-      // horizontal scaling: scale whole wrapper proportionally to the vertical change
-      const wrapper = iconEl.querySelector('#nmsf-wrapper');
-      if (wrapper) {
-        const scale = pxPerMile / BASE_BAR_PX; // >1 when zoomed in, <1 when zoomed out
-        wrapper.style.transform = `scale(${scale})`;
-      }
-    }
-
-    map.whenReady(updateBarHeights);
-    map.on('zoom', updateBarHeights);
-    map.on('move', updateBarHeights);
+    L.marker([greenhill.lat, greenhill.lng], { icon: greenhillIcon }).addTo(map);
   </script>
 </body>
 </html>
