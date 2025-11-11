@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW NMSF – Zoom-scaled bars (fixed anchor)</title>
+  <title>DFW NMSF – pinned graphs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link
     rel="stylesheet"
@@ -12,16 +12,24 @@
   <style>
     html, body, #map { height: 100%; margin: 0; }
 
+    /* the actual Leaflet icon root; keep tiny */
     .nmsf-marker {
+      width: 1px;
+      height: 1px;
       background: transparent;
-      border: none;
+      position: relative;
     }
 
+    /* we pin the graph here, bottom-left at the map point */
     .nmsf-wrapper {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      transform: translate(-50%, 0); /* center horizontally on the point */
       display: flex;
       flex-direction: column;
       align-items: center;
-      transform-origin: bottom center;
+      pointer-events: auto;
     }
 
     .nmsf-chart {
@@ -122,7 +130,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
-    // Map
+    // map
     const map = L.map('map').setView([32.9, -97.0], 9);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -136,14 +144,13 @@
     map.whenReady(updateZoomLabel);
 
     const wantedFips = ['48085','48113','48121','48439'];
-
     function showError(msg) {
       const el = document.getElementById('error');
       el.textContent = msg;
       el.style.display = 'block';
     }
 
-    // Clickable counties
+    // counties (click to highlight)
     let selectedLayer = null;
     let selectedTooltip = null;
     const countyFillByFips = {
@@ -205,14 +212,14 @@
         if (countiesLayer.getLayers().length > 0) {
           map.fitBounds(countiesLayer.getBounds());
         }
-        map.on('click', () => { clearCountySelection(); });
+        map.on('click', () => clearCountySelection());
       })
       .catch(err => {
         console.error(err);
         showError('Could not load tx-counties.geojson.');
       });
 
-    // Schools
+    // schools
     const schools = [
       {
         name: 'Greenhill School',
@@ -230,7 +237,7 @@
       }
     ];
 
-    // Global scale
+    // global scale
     const allVals = [];
     schools.forEach(s => {
       allVals.push(s.semis[2022], s.semis[2023], s.semis[2024], s.semis[2025]);
@@ -239,7 +246,7 @@
     const COLOR_PUBLIC = 'rgba(31, 120, 180, 0.7)';
     const COLOR_PRIVATE = 'rgba(128, 0, 128, 0.7)';
 
-    // Vertical scale by zoom
+    // vertical per zoom
     function maxHeightForZoom(z) {
       if (z >= 19) return 600;
       if (z === 18) return 550;
@@ -255,7 +262,7 @@
       return 50;
     }
 
-    // Horizontal scale by zoom
+    // horizontal per zoom
     function barWidthForZoom(z) {
       if (z >= 19) return 26;
       if (z === 18) return 25;
@@ -268,10 +275,10 @@
       if (z === 11) return 18;
       if (z === 10) return 17;
       if (z === 9) return 16;
-      return 16; // 8-1
+      return 16;
     }
 
-    // Keep references so we can resize
+    // store icon DOM
     const schoolIcons = [];
 
     function createSchoolMarker(school, idx) {
@@ -282,22 +289,22 @@
           <div class="nmsf-chart">
             <div class="nmsf-bar-wrap">
               <div class="nmsf-top-label">${school.semis[2022]} NMSF</div>
-              <div class="nmsf-bar" data-school="${idx}" data-year="2022" style="height:50px; background:${barColor};"></div>
+              <div class="nmsf-bar" data-school="${idx}" data-year="2022" style="background:${barColor};"></div>
               <div class="nmsf-bottom-label">2022</div>
             </div>
             <div class="nmsf-bar-wrap">
               <div class="nmsf-top-label">${school.semis[2023]} NMSF</div>
-              <div class="nmsf-bar" data-school="${idx}" data-year="2023" style="height:50px; background:${barColor};"></div>
+              <div class="nmsf-bar" data-school="${idx}" data-year="2023" style="background:${barColor};"></div>
               <div class="nmsf-bottom-label">2023</div>
             </div>
             <div class="nmsf-bar-wrap">
               <div class="nmsf-top-label">${school.semis[2024]} NMSF</div>
-              <div class="nmsf-bar" data-school="${idx}" data-year="2024" style="height:50px; background:${barColor};"></div>
+              <div class="nmsf-bar" data-school="${idx}" data-year="2024" style="background:${barColor};"></div>
               <div class="nmsf-bottom-label">2024</div>
             </div>
             <div class="nmsf-bar-wrap">
               <div class="nmsf-top-label">${school.semis[2025]} NMSF</div>
-              <div class="nmsf-bar" data-school="${idx}" data-year="2025" style="height:50px; background:${barColor};"></div>
+              <div class="nmsf-bar" data-school="${idx}" data-year="2025" style="background:${barColor};"></div>
               <div class="nmsf-bottom-label">2025</div>
             </div>
           </div>
@@ -305,12 +312,11 @@
         </div>
       `;
 
-      // max height is 600; label adds ~20; make box 160×650. Anchor bottom center.
       const icon = L.divIcon({
         className: 'nmsf-marker',
         html,
-        iconSize: [160, 650],
-        iconAnchor: [80, 650]
+        iconSize: [1, 1],     // critical: keep tiny so Leaflet anchors at the point
+        iconAnchor: [0, 0]
       });
 
       const marker = L.marker([school.lat, school.lng], { icon }).addTo(map);
