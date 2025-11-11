@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>DFW Counties Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script>
+    // VERY rough, simplified county polygons (just to get you started).
+    // Replace with real GeoJSON later.
+    const counties = {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": { "name": "Dallas County" },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+              [-96.997, 33.023],
+              [-96.997, 32.561],
+              [-96.521, 32.561],
+              [-96.521, 33.023],
+              [-96.997, 33.023]
+            ]]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": { "name": "Tarrant County" },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+              [-97.585, 33.080],
+              [-97.585, 32.415],
+              [-97.105, 32.415],
+              [-97.105, 33.080],
+              [-97.585, 33.080]
+            ]]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": { "name": "Denton County" },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+              [-97.402, 33.454],
+              [-97.402, 33.025],
+              [-96.809, 33.025],
+              [-96.809, 33.454],
+              [-97.402, 33.454]
+            ]]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": { "name": "Collin County" },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+              [-96.909, 33.451],
+              [-96.909, 32.857],
+              [-96.363, 32.857],
+              [-96.363, 33.451],
+              [-96.909, 33.451]
+            ]]
+          }
+        }
+      ]
+    };
+
+    const map = L.map('map');
+
+    // basemap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // add counties
+    const countyLayer = L.geoJSON(counties, {
+      style: function (feature) {
+        return {
+          color: '#1f78b4',
+          weight: 2,
+          fillColor: '#a6cee3',
+          fillOpacity: 0.2
+        };
+      },
+      onEachFeature: function (feature, layer) {
+        layer.bindPopup(feature.properties.name);
+      }
+    }).addTo(map);
+
+    // fit to all counties
+    map.fitBounds(countyLayer.getBounds());
+  </script>
+</body>
+</html>
