@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW NMSF – Counties + Two Schools</title>
+  <title>DFW NMSF – Counties + Schools</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link
     rel="stylesheet"
@@ -38,9 +38,9 @@
       align-items: center;
     }
 
+    /* base bar, color overridden inline per school type */
     .nmsf-bar {
       width: 16px;
-      background: rgba(31, 120, 180, 0.55);
       border-radius: 3px 3px 0 0;
       cursor: default;
       transition: background 0.1s;
@@ -80,8 +80,9 @@
       display: block;
     }
 
+    /* hover color handled inline via style attr + :hover override */
     .nmsf-bar-wrap:hover .nmsf-bar {
-      background: rgba(220, 50, 47, 0.75);
+      filter: brightness(1.1);
     }
 
     .nmsf-label {
@@ -103,11 +104,24 @@
       display: none;
       z-index: 1000;
     }
+
+    /* zoom level display */
+    #zoom-level {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font: 12px sans-serif;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="error"></div>
+  <div id="zoom-level">Zoom: …</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
@@ -120,6 +134,14 @@
 
     // scale
     L.control.scale().addTo(map);
+
+    // zoom label
+    const zoomEl = document.getElementById('zoom-level');
+    function updateZoomLabel() {
+      zoomEl.textContent = 'Zoom: ' + map.getZoom();
+    }
+    map.on('zoomend', updateZoomLabel);
+    map.whenReady(updateZoomLabel);
 
     const wantedFips = ['48085','48113','48121','48439'];
 
@@ -210,59 +232,63 @@
         showError('Could not load tx-counties.geojson.');
       });
 
-    // ------- schools -------
+    // schools, with type
     const schools = [
       {
         name: 'Greenhill School',
         lat: 32.941856,
         lng: -96.8463216,
+        type: 'private',
         semis: { 2022: 6, 2023: 8, 2024: 10, 2025: 10 }
       },
       {
         name: 'Allen H.S.',
         lat: 33.1096682,
         lng: -96.6633394,
+        type: 'public',
         semis: { 2022: 31, 2023: 43, 2024: 42, 2025: 26 }
       }
     ];
 
-    // create a marker with scaled bars for one school
-    function createSchoolMarker(school) {
-      // find this school's max to keep graph reasonable
-      const vals = [
-        school.semis[2022],
-        school.semis[2023],
-        school.semis[2024],
-        school.semis[2025]
-      ];
-      const maxVal = Math.max.apply(null, vals);
-      const MAX_BAR_PX = 100; // tallest bar = 100px
+    // find global max for consistent scale
+    const allVals = [];
+    schools.forEach(s => {
+      allVals.push(s.semis[2022], s.semis[2023], s.semis[2024], s.semis[2025]);
+    });
+    const GLOBAL_MAX = Math.max.apply(null, allVals); // 43
+    const MAX_BAR_PX = 100; // 43 -> 100px, others proportionally
 
-      function h(v) {
-        return Math.max(4, (v / maxVal) * MAX_BAR_PX);
-      }
+    const COLOR_PUBLIC = 'rgba(31, 120, 180, 0.7)';
+    const COLOR_PRIVATE = 'rgba(128, 0, 128, 0.7)';
+
+    function barHeight(val) {
+      return Math.max(4, (val / GLOBAL_MAX) * MAX_BAR_PX);
+    }
+
+    function createSchoolMarker(school) {
+      const barColor = school.type === 'private' ? COLOR_PRIVATE : COLOR_PUBLIC;
 
       const html = `
         <div class="nmsf-wrapper">
           <div class="nmsf-chart">
             <div class="nmsf-bar-wrap">
               <div class="nmsf-top-label">${school.semis[2022]} NMSF</div>
-              <div class="nmsf-bar" style="height:${h(school.semis[2022])}px"></div>
+              <div class="nmsf-bar" style="height:${barHeight(school.semis[2022])}px; background:${barColor};"></div>
               <div class="nmsf-bottom-label">2022</div>
             </div>
             <div class="nmsf-bar-wrap">
               <div class="nmsf-top-label">${school.semis[2023]} NMSF</div>
-              <div class="nmsf-bar" style="height:${h(school.semis[2023])}px"></div>
+              <div class="nmsf-bar" style="height:${barHeight(school.semis[2023])}px; background:${barColor};"></div>
               <div class="nmsf-bottom-label">2023</div>
             </div>
             <div class="nmsf-bar-wrap">
               <div class="nmsf-top-label">${school.semis[2024]} NMSF</div>
-              <div class="nmsf-bar" style="height:${h(school.semis[2024])}px"></div>
+              <div class="nmsf-bar" style="height:${barHeight(school.semis[2024])}px; background:${barColor};"></div>
               <div class="nmsf-bottom-label">2024</div>
             </div>
             <div class="nmsf-bar-wrap">
               <div class="nmsf-top-label">${school.semis[2025]} NMSF</div>
-              <div class="nmsf-bar" style="height:${h(school.semis[2025])}px"></div>
+              <div class="nmsf-bar" style="height:${barHeight(school.semis[2025])}px; background:${barColor};"></div>
               <div class="nmsf-bottom-label">2025</div>
             </div>
           </div>
@@ -273,11 +299,11 @@
       const icon = L.divIcon({
         className: 'nmsf-marker',
         html,
-        iconSize: [200, 180],
-        iconAnchor: [100, 180]
+        iconSize: [210, 180],
+        iconAnchor: [105, 180]
       });
 
-      return L.marker([school.lat, school.lng], { icon }).addTo(map);
+      L.marker([school.lat, school.lng], { icon }).addTo(map);
     }
 
     schools.forEach(createSchoolMarker);
