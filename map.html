@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW NMSF – Fixed Bar + Clickable Counties</title>
+  <title>DFW NMSF – Counties + Fixed Bar</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link
     rel="stylesheet"
@@ -29,7 +29,6 @@
       gap: 4px;
       align-items: flex-end;
       justify-content: center;
-      /* height is not set here; each bar gets explicit height */
     }
 
     .nmsf-bar-wrap {
@@ -39,18 +38,20 @@
       align-items: center;
     }
 
-    /* 2x wider bars */
+    /* bars 2x wide, base color */
     .nmsf-bar {
       width: 16px;
       background: rgba(31, 120, 180, 0.55);
       border-radius: 3px 3px 0 0;
       cursor: default;
+      transition: background 0.1s;
     }
 
+    /* top label positioned away, so bar doesn't jump */
     .nmsf-top-label {
       position: absolute;
       bottom: 100%;
-      margin-bottom: 3px;
+      transform: translateY(-8px); /* keep away from bar top */
       background: rgba(255,255,255,0.95);
       border: 1px solid #aaa;
       border-radius: 3px;
@@ -59,10 +60,14 @@
       font-weight: 700;
       white-space: nowrap;
       display: none;
+      pointer-events: none;
     }
 
+    /* bottom label also away */
     .nmsf-bottom-label {
-      margin-top: 3px;
+      position: absolute;
+      top: 100%;
+      transform: translateY(8px);
       background: rgba(255,255,255,0.95);
       border: 1px solid #aaa;
       border-radius: 3px;
@@ -70,11 +75,18 @@
       font-size: 11px;
       font-weight: 700;
       display: none;
+      pointer-events: none;
     }
 
+    /* show both on hover */
     .nmsf-bar-wrap:hover .nmsf-top-label,
     .nmsf-bar-wrap:hover .nmsf-bottom-label {
       display: block;
+    }
+
+    /* bar changes color on hover */
+    .nmsf-bar-wrap:hover .nmsf-bar {
+      background: rgba(220, 50, 47, 0.75);
     }
 
     .nmsf-label {
@@ -96,26 +108,11 @@
       display: none;
       z-index: 1000;
     }
-
-    /* county label for clicks */
-    #county-label {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      background: rgba(255,255,255,0.95);
-      border: 1px solid #aaa;
-      border-radius: 4px;
-      padding: 4px 8px;
-      font: 12px sans-serif;
-      display: none;
-      z-index: 1000;
-    }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div id="error"></div>
-  <div id="county-label"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
@@ -126,11 +123,10 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // show a scale
+    // scale
     L.control.scale().addTo(map);
 
-    const wantedFips = ['48085','48113','48121','48439'];
-    let selectedCounty = null;
+    const wantedFips = ['48085','48113','48121','48439']; // Collin, Dallas, Denton, Tarrant
 
     function showError(msg) {
       const el = document.getElementById('error');
@@ -138,14 +134,37 @@
       el.style.display = 'block';
     }
 
-    // clickable counties
+    // keep track of selected county
+    let selectedLayer = null;
+    let selectedTooltip = null;
+
+    // distinct fill colors for the four counties
+    const countyFillByFips = {
+      '48113': 'rgba(0, 123, 255, 0.45)',   // Dallas
+      '48439': 'rgba(40, 167, 69, 0.45)',   // Tarrant
+      '48121': 'rgba(255, 193, 7, 0.45)',   // Denton
+      '48085': 'rgba(220, 53, 69, 0.45)'    // Collin
+    };
+
+    function clearCountySelection() {
+      if (selectedLayer) {
+        selectedLayer.setStyle({ fillOpacity: 0.1, fillColor: '#cccccc' });
+        selectedLayer = null;
+      }
+      if (selectedTooltip) {
+        map.removeLayer(selectedTooltip);
+        selectedTooltip = null;
+      }
+    }
+
+    // load counties
     fetch('tx-counties.geojson')
       .then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       })
       .then(data => {
-        const layer = L.geoJSON(data, {
+        const countiesLayer = L.geoJSON(data, {
           filter: f => (f.properties || {}).FIPS && wantedFips.includes(f.properties.FIPS),
           style: {
             color: '#555',
@@ -154,27 +173,51 @@
             fillOpacity: 0.1
           },
           onEachFeature: (feature, layer) => {
-            layer.on('click', () => {
-              // reset previous
-              if (selectedCounty) {
-                selectedCounty.setStyle({ fillOpacity: 0.1 });
-              }
-              // set this one
-              layer.setStyle({ fillOpacity: 0.35 });
-              selectedCounty = layer;
+            layer.on('click', (e) => {
+              // prevent map-click from firing
+              L.DomEvent.stopPropagation(e);
 
+              // if re-clicking the selected county, clear
+              if (selectedLayer === layer) {
+                clearCountySelection();
+                return;
+              }
+
+              // clear previous
+              clearCountySelection();
+
+              // set this one
+              const fips = feature.properties.FIPS;
+              const fill = countyFillByFips[fips] || 'rgba(0,0,255,0.3)';
+              layer.setStyle({ fillColor: fill, fillOpacity: 0.45 });
+              selectedLayer = layer;
+
+              // add label next to polygon
+              const center = layer.getBounds().getCenter();
               const name = feature.properties.COUNTY || 'County';
-              const label = document.getElementById('county-label');
-              label.textContent = name;
-              label.style.display = 'block';
+              selectedTooltip = L.tooltip({
+                permanent: true,
+                direction: 'right',
+                offset: [12, 0],
+                className: 'county-label-tooltip'
+              })
+              .setContent('<strong style="font-size:14px;">' + name + '</strong>')
+              .setLatLng(center)
+              .addTo(map);
+
               layer.bringToFront();
             });
           }
         }).addTo(map);
 
-        if (layer.getLayers().length > 0) {
-          map.fitBounds(layer.getBounds());
+        if (countiesLayer.getLayers().length > 0) {
+          map.fitBounds(countiesLayer.getBounds());
         }
+
+        // clicking anywhere else clears selection
+        map.on('click', () => {
+          clearCountySelection();
+        });
       })
       .catch(err => {
         console.error(err);
@@ -189,7 +232,7 @@
       semis: { 2022: 6, 2023: 8, 2024: 10, 2025: 10 }
     };
 
-    // fixed-height graph: 10 NMSF = 100px
+    // fixed-size graph: 10 NMSF = 100px
     const MAX_NMSF = 10;
     const MAX_BAR_PX = 100;
 
@@ -198,7 +241,7 @@
     }
 
     const markerHtml = `
-      <div class="nmsf-wrapper" id="nmsf-wrapper">
+      <div class="nmsf-wrapper">
         <div class="nmsf-chart">
           <div class="nmsf-bar-wrap">
             <div class="nmsf-top-label">${greenhill.semis[2022]} NMSF</div>
@@ -225,12 +268,12 @@
       </div>
     `;
 
-    // since size is now constant, give the icon enough room and anchor at bottom center
+    // enough room for wider bars and 100px height
     const greenhillIcon = L.divIcon({
       className: 'nmsf-marker',
       html: markerHtml,
-      iconSize: [160, 140],
-      iconAnchor: [80, 140]
+      iconSize: [180, 160],
+      iconAnchor: [90, 160]
     });
 
     L.marker([greenhill.lat, greenhill.lng], { icon: greenhillIcon }).addTo(map);
