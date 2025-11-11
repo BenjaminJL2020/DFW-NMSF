@@ -2,9 +2,8 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>DFW NMSF – Counties + Greenhill</title>
+  <title>DFW NMSF – pinned graphs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -13,57 +12,93 @@
   <style>
     html, body, #map { height: 100%; margin: 0; }
 
-    /* info panel */
-    #info {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 10px 12px;
-      font: 12px/1.3 sans-serif;
-      z-index: 1000;
-      width: 200px;
-      display: none;
-    }
-    #school-name {
-      margin: 0 0 8px 0;
-      font-weight: bold;
-      font-size: 13px;
+    /* the actual Leaflet icon root; keep tiny */
+    .nmsf-marker {
+      width: 1px;
+      height: 1px;
+      background: transparent;
+      position: relative;
     }
 
-    /* chart layout: axis on left, bars on right */
-    #chart {
+    /* we pin the graph here, bottom-left at the map point */
+    .nmsf-wrapper {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      transform: translate(-50%, 0); /* center horizontally on the point */
       display: flex;
-      gap: 6px;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: auto;
     }
-    #y-axis {
+
+    .nmsf-chart {
       display: flex;
-      flex-direction: column-reverse;
-      justify-content: space-between;
-      height: 140px;
-      font-size: 10px;
-      color: #555;
-    }
-    #bars {
-      display: flex;
-      gap: 6px;
+      gap: 4px;
       align-items: flex-end;
-      height: 140px;
-      margin-bottom: 6px;
+      justify-content: center;
     }
-    .bar-group { text-align: center; width: 30px; }
-    .bar {
-      width: 100%;
-      background: #1f78b4;
-      transition: height 0.15s ease-out;
+
+    .nmsf-bar-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-    .year-label {
-      font-size: 10px;
+
+    .nmsf-bar {
+      background: rgba(31, 120, 180, 0.7);
+      border-radius: 3px 3px 0 0;
+      cursor: default;
+      transition: filter 0.1s;
+    }
+
+    .nmsf-top-label {
+      position: absolute;
+      bottom: 100%;
+      transform: translateY(-8px);
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #aaa;
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      display: none;
+      pointer-events: none;
+    }
+
+    .nmsf-bottom-label {
+      position: absolute;
+      top: 100%;
+      transform: translateY(8px);
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #aaa;
+      border-radius: 3px;
+      padding: 1px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      display: none;
+      pointer-events: none;
+    }
+
+    .nmsf-bar-wrap:hover .nmsf-top-label,
+    .nmsf-bar-wrap:hover .nmsf-bottom-label {
       display: block;
-      margin-top: 3px;
     }
-    #total { font-size: 11px; color: #555; margin-top: 4px; }
+
+    .nmsf-bar-wrap:hover .nmsf-bar {
+      filter: brightness(1.15);
+    }
+
+    .nmsf-label {
+      margin-top: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #0b3d91;
+      text-shadow: 0 1px 3px #fff;
+      white-space: nowrap;
+    }
 
     #error {
       position: absolute;
@@ -75,50 +110,65 @@
       display: none;
       z-index: 1000;
     }
+
+    #zoom-level {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font: 12px sans-serif;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div id="info">
-    <p id="school-name"></p>
-    <div id="chart">
-      <div id="y-axis">
-        <!-- filled by JS -->
-      </div>
-      <div id="bars">
-        <div class="bar-group">
-          <div class="bar" id="bar-2022" style="height:2px;"></div>
-          <span class="year-label">2022</span>
-        </div>
-        <div class="bar-group">
-          <div class="bar" id="bar-2023" style="height:2px;"></div>
-          <span class="year-label">2023</span>
-        </div>
-        <div class="bar-group">
-          <div class="bar" id="bar-2024" style="height:2px;"></div>
-          <span class="year-label">2024</span>
-        </div>
-        <div class="bar-group">
-          <div class="bar" id="bar-2025" style="height:2px;"></div>
-          <span class="year-label">2025</span>
-        </div>
-      </div>
-    </div>
-    <p id="total"></p>
-  </div>
   <div id="error"></div>
+  <div id="zoom-level">Zoom: …</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
-    // base map
+    // map
     const map = L.map('map').setView([32.9, -97.0], 9);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+    L.control.scale().addTo(map);
 
-    // counties
-    const wantedFips = ['48085','48113','48121','48439']; // Collin, Dallas, Denton, Tarrant
+    const zoomEl = document.getElementById('zoom-level');
+    function updateZoomLabel() { zoomEl.textContent = 'Zoom: ' + map.getZoom(); }
+    map.on('zoomend', updateZoomLabel);
+    map.whenReady(updateZoomLabel);
+
+    const wantedFips = ['48085','48113','48121','48439'];
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    // counties (click to highlight)
+    let selectedLayer = null;
+    let selectedTooltip = null;
+    const countyFillByFips = {
+      '48113': 'rgba(0, 123, 255, 0.45)',
+      '48439': 'rgba(40, 167, 69, 0.45)',
+      '48121': 'rgba(255, 193, 7, 0.45)',
+      '48085': 'rgba(220, 53, 69, 0.45)'
+    };
+    function clearCountySelection() {
+      if (selectedLayer) {
+        selectedLayer.setStyle({ fillOpacity: 0.1, fillColor: '#cccccc' });
+        selectedLayer = null;
+      }
+      if (selectedTooltip) {
+        map.removeLayer(selectedTooltip);
+        selectedTooltip = null;
+      }
+    }
     fetch('tx-counties.geojson')
       .then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -126,103 +176,175 @@
       })
       .then(data => {
         const countiesLayer = L.geoJSON(data, {
-          filter: f => {
-            const p = f.properties || {};
-            return wantedFips.includes(p.FIPS);
-          },
+          filter: f => (f.properties || {}).FIPS && wantedFips.includes(f.properties.FIPS),
           style: {
             color: '#555',
             weight: 2,
             fillColor: '#cccccc',
             fillOpacity: 0.1
           },
-          onEachFeature: (f, layer) => {
-            layer.bindPopup(f.properties.COUNTY || 'County');
+          onEachFeature: (feature, layer) => {
+            layer.on('click', (e) => {
+              L.DomEvent.stopPropagation(e);
+              if (selectedLayer === layer) {
+                clearCountySelection();
+                return;
+              }
+              clearCountySelection();
+              const fips = feature.properties.FIPS;
+              const fill = countyFillByFips[fips] || 'rgba(0,0,255,0.3)';
+              layer.setStyle({ fillColor: fill, fillOpacity: 0.45 });
+              selectedLayer = layer;
+              const center = layer.getBounds().getCenter();
+              const name = feature.properties.COUNTY || 'County';
+              selectedTooltip = L.tooltip({
+                permanent: true,
+                direction: 'right',
+                offset: [12, 0]
+              })
+                .setContent('<strong style="font-size:14px;">' + name + '</strong>')
+                .setLatLng(center)
+                .addTo(map);
+              layer.bringToFront();
+            });
           }
         }).addTo(map);
         if (countiesLayer.getLayers().length > 0) {
           map.fitBounds(countiesLayer.getBounds());
         }
+        map.on('click', () => clearCountySelection());
       })
       .catch(err => {
         console.error(err);
         showError('Could not load tx-counties.geojson.');
       });
 
-    function showError(msg) {
-      const el = document.getElementById('error');
-      el.textContent = msg;
-      el.style.display = 'block';
-    }
-
-    // school data
-    const greenhill = {
-      name: 'Greenhill School (Addison, TX)',
-      lat: 32.941856,
-      lng: -96.8463216,
-      semis: {
-        2022: 6,
-        2023: 8,
-        2024: 10,
-        2025: 10
+    // schools
+    const schools = [
+      {
+        name: 'Greenhill School',
+        lat: 32.941856,
+        lng: -96.8463216,
+        type: 'private',
+        semis: { 2022: 6, 2023: 8, 2024: 10, 2025: 10 }
+      },
+      {
+        name: 'Allen H.S.',
+        lat: 33.1096682,
+        lng: -96.6633394,
+        type: 'public',
+        semis: { 2022: 31, 2023: 43, 2024: 42, 2025: 26 }
       }
-    };
+    ];
 
-    // marker
-    const m = L.marker([greenhill.lat, greenhill.lng]).addTo(map);
-    m.bindTooltip(greenhill.name);
-
-    // chart scaling
-    const maxVal = Math.max(
-      greenhill.semis[2022],
-      greenhill.semis[2023],
-      greenhill.semis[2024],
-      greenhill.semis[2025]
-    );
-    const maxPx = 120;
-    const yTicks = [0, 5, 10]; // simple scale
-    const yAxis = document.getElementById('y-axis');
-    yAxis.innerHTML = '';
-    yTicks.forEach(v => {
-      const d = document.createElement('div');
-      d.textContent = v;
-      yAxis.appendChild(d);
+    // global scale
+    const allVals = [];
+    schools.forEach(s => {
+      allVals.push(s.semis[2022], s.semis[2023], s.semis[2024], s.semis[2025]);
     });
+    const GLOBAL_MAX = Math.max.apply(null, allVals); // 43
+    const COLOR_PUBLIC = 'rgba(31, 120, 180, 0.7)';
+    const COLOR_PRIVATE = 'rgba(128, 0, 128, 0.7)';
 
-    function setBar(id, value) {
-      const h = (value / maxVal) * maxPx;
-      const el = document.getElementById(id);
-      el.style.height = (h > 2 ? h : 2) + 'px';
+    // vertical per zoom
+    function maxHeightForZoom(z) {
+      if (z >= 19) return 600;
+      if (z === 18) return 550;
+      if (z === 17) return 500;
+      if (z === 16) return 450;
+      if (z === 15) return 400;
+      if (z === 14) return 350;
+      if (z === 13) return 300;
+      if (z === 12) return 250;
+      if (z === 11) return 200;
+      if (z === 10) return 150;
+      if (z <= 9) return 100;
+      return 100;
     }
 
-    const infoPanel = document.getElementById('info');
-    let infoVisible = false;
-
-    function showSchool(s) {
-      document.getElementById('school-name').textContent = s.name;
-      setBar('bar-2022', s.semis[2022]);
-      setBar('bar-2023', s.semis[2023]);
-      setBar('bar-2024', s.semis[2024]);
-      setBar('bar-2025', s.semis[2025]);
-      const total = s.semis[2022] + s.semis[2023] + s.semis[2024] + s.semis[2025];
-      document.getElementById('total').textContent = 'Total 2022–2025: ' + total;
-      infoPanel.style.display = 'block';
-      infoVisible = true;
+    // horizontal per zoom
+    function barWidthForZoom(z) {
+      if (z >= 19) return 22;
+      if (z === 18) return 21;
+      if (z === 17) return 20;
+      if (z === 16) return 19;
+      if (z === 15) return 18;
+      if (z === 14) return 17;
+      if (z === 13) return 16;
+      if (z === 12) return 15;
+      if (z === 11) return 14;
+      if (z === 10) return 13;
+      if (z <= 9) return 12;
+      return 12;
     }
 
-    function hideSchool() {
-      infoPanel.style.display = 'none';
-      infoVisible = false;
+    // store icon DOM
+    const schoolIcons = [];
+
+    function createSchoolMarker(school, idx) {
+      const barColor = school.type === 'private' ? COLOR_PRIVATE : COLOR_PUBLIC;
+
+      const html = `
+        <div class="nmsf-wrapper" data-school="${idx}">
+          <div class="nmsf-chart">
+            <div class="nmsf-bar-wrap">
+              <div class="nmsf-top-label">${school.semis[2022]} NMSF</div>
+              <div class="nmsf-bar" data-school="${idx}" data-year="2022" style="background:${barColor};"></div>
+              <div class="nmsf-bottom-label">2022</div>
+            </div>
+            <div class="nmsf-bar-wrap">
+              <div class="nmsf-top-label">${school.semis[2023]} NMSF</div>
+              <div class="nmsf-bar" data-school="${idx}" data-year="2023" style="background:${barColor};"></div>
+              <div class="nmsf-bottom-label">2023</div>
+            </div>
+            <div class="nmsf-bar-wrap">
+              <div class="nmsf-top-label">${school.semis[2024]} NMSF</div>
+              <div class="nmsf-bar" data-school="${idx}" data-year="2024" style="background:${barColor};"></div>
+              <div class="nmsf-bottom-label">2024</div>
+            </div>
+            <div class="nmsf-bar-wrap">
+              <div class="nmsf-top-label">${school.semis[2025]} NMSF</div>
+              <div class="nmsf-bar" data-school="${idx}" data-year="2025" style="background:${barColor};"></div>
+              <div class="nmsf-bottom-label">2025</div>
+            </div>
+          </div>
+          <div class="nmsf-label">${school.name}</div>
+        </div>
+      `;
+
+      const icon = L.divIcon({
+        className: 'nmsf-marker',
+        html,
+        iconSize: [1, 1],     // critical: keep tiny so Leaflet anchors at the point
+        iconAnchor: [0, 0]
+      });
+
+      const marker = L.marker([school.lat, school.lng], { icon }).addTo(map);
+      schoolIcons.push({ school, iconEl: marker._icon });
     }
 
-    // click to toggle
-    m.on('click', () => {
-      if (infoVisible) {
-        hideSchool();
-      } else {
-        showSchool(greenhill);
-      }
-    });
+    schools.forEach((s, i) => createSchoolMarker(s, i));
+
+    function updateBarsForZoom() {
+      const z = map.getZoom();
+      const maxH = maxHeightForZoom(z);
+      const barW = barWidthForZoom(z);
+
+      schoolIcons.forEach(({ school, iconEl }, idx) => {
+        if (!iconEl) return;
+        const bars = iconEl.querySelectorAll('.nmsf-bar[data-school="' + idx + '"]');
+        bars.forEach(bar => {
+          const year = bar.getAttribute('data-year');
+          const val = school.semis[year];
+          const h = Math.max(4, (val / GLOBAL_MAX) * maxH);
+          bar.style.height = h + 'px';
+          bar.style.width = barW + 'px';
+        });
+      });
+    }
+
+    map.whenReady(updateBarsForZoom);
+    map.on('zoomend', updateBarsForZoom);
   </script>
 </body>
 </html>
