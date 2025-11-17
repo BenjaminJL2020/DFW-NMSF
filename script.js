@@ -6,8 +6,11 @@ const map = L.map('map', {
 }).setView([32.95, -96.85], 10);
 
 const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19
+    maxZoom: 15
 }).addTo(map);
+
+// Add scale control
+L.control.scale().addTo(map);
 
 // Layer group for schools - no clustering so all charts always display
 const schoolLayerGroup = L.layerGroup();
@@ -93,27 +96,18 @@ function normalizeSector(raw) {
 // ZOOM-BASED SIZING
 // ========================================
 function maxHeightForZoom(z) {
-    // Reduced heights to prevent overlap - scale down significantly
-    if (z >= 19) return 120;
-    if (z === 18) return 100;
-    if (z === 17) return 85;
-    if (z === 16) return 70;
-    if (z === 15) return 60;
-    if (z === 14) return 50;
-    if (z === 13) return 40;
-    if (z === 12) return 35;
-    if (z === 11) return 30;
-    if (z === 10) return 25;
-    if (z === 9) return 20;
-    return 15;
+    if (z === 15) return 200;
+    if (z === 14) return 175;
+    if (z === 13) return 150;
+    if (z === 12) return 125;
+    if (z === 11) return 100;
+    if (z === 10) return 75;
+    if (z === 9) return 50;
+    return 50;
 }
 
 function barWidthForZoom(z) {
     // Narrower bars - as narrow as possible but still clickable (minimum 8px)
-    if (z >= 19) return 10;
-    if (z === 18) return 9;
-    if (z === 17) return 9;
-    if (z === 16) return 8;
     if (z === 15) return 8;
     if (z === 14) return 8;
     if (z === 13) return 8;
@@ -195,8 +189,9 @@ function makeSchoolHTML(school, idx) {
         const count = school.counts[year] || 0;
         return `
             <div class="nmsf-bar-wrap" data-year="${year}">
-                <div class="nmsf-hover-label">${year}: ${count} NMSF</div>
+                <div class="nmsf-top-label">${count}</div>
                 <div class="nmsf-bar ${sectorClass}" data-school="${idx}" data-year="${year}"></div>
+                <div class="nmsf-bottom-label">${year}</div>
             </div>
         `;
     }).join('');
@@ -234,6 +229,16 @@ function updateBarsForZoom() {
             bar.style.height = Math.max(4, (val / GLOBAL_MAX) * maxH) + 'px';
             bar.style.width = barW + 'px';
         });
+        
+        // Show/hide school name based on zoom level
+        const label = iconEl.querySelector('.nmsf-label');
+        if (label) {
+            if (z >= 11 && z <= 15) {
+                label.style.display = '';
+            } else {
+                label.style.display = 'none';
+            }
+        }
     });
 }
 
