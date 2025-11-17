@@ -178,11 +178,57 @@ function applyFilters() {
         }
     });
     updateBarsForFilters();
+    // Update label wrapping when filters change (chart width may change)
+    updateBarsForZoom();
 }
 
 // ========================================
 // CHART HTML GENERATION
 // ========================================
+function wrapTextToTwoLines(text) {
+    // Split text into two lines of roughly equal length
+    const words = text.split(' ');
+    if (words.length <= 1) return text;
+    
+    // Try to find the best split point for equal line lengths
+    let bestSplit = Math.ceil(words.length / 2);
+    let minDiff = Infinity;
+    
+    // Create a temporary element to measure text width
+    const tempEl = document.createElement('span');
+    tempEl.style.visibility = 'hidden';
+    tempEl.style.position = 'absolute';
+    tempEl.style.fontSize = '13px';
+    tempEl.style.fontFamily = '"Arial Narrow", Arial, sans-serif';
+    tempEl.style.fontWeight = '700';
+    tempEl.style.maxWidth = '150px';
+    document.body.appendChild(tempEl);
+    
+    // Try different split points to find the most balanced
+    for (let i = 1; i < words.length; i++) {
+        const firstLine = words.slice(0, i).join(' ');
+        const secondLine = words.slice(i).join(' ');
+        
+        tempEl.textContent = firstLine;
+        const firstWidth = tempEl.offsetWidth;
+        tempEl.textContent = secondLine;
+        const secondWidth = tempEl.offsetWidth;
+        
+        const diff = Math.abs(firstWidth - secondWidth);
+        if (diff < minDiff) {
+            minDiff = diff;
+            bestSplit = i;
+        }
+    }
+    
+    document.body.removeChild(tempEl);
+    
+    const firstLine = words.slice(0, bestSplit).join(' ');
+    const secondLine = words.slice(bestSplit).join(' ');
+    
+    return firstLine + '<br>' + secondLine;
+}
+
 function makeSchoolHTML(school, idx) {
     const sectorClass = getSectorColorClass(school.sector);
     const bars = yearKeys.map(year => {
@@ -201,7 +247,7 @@ function makeSchoolHTML(school, idx) {
             <div class="nmsf-chart">
                 ${bars}
             </div>
-            <div class="nmsf-label">${school.name}</div>
+            <div class="nmsf-label" data-school-name="${school.name}">${school.name}</div>
         </div>
     `;
 }
@@ -223,6 +269,8 @@ function updateBarsForZoom() {
     markers.forEach(({ school, iconEl }, idx) => {
         if (!iconEl) return;
         const bars = iconEl.querySelectorAll(`.nmsf-bar[data-school="${idx}"]`);
+        const chart = iconEl.querySelector('.nmsf-chart');
+        
         bars.forEach(bar => {
             const year = bar.getAttribute('data-year');
             const val = school.counts[year] || 0;
@@ -230,13 +278,27 @@ function updateBarsForZoom() {
             bar.style.width = barW + 'px';
         });
         
-        // Show/hide school name based on zoom level
+        // Handle school name display and wrapping
         const label = iconEl.querySelector('.nmsf-label');
         if (label) {
-            if (z >= 11 && z <= 15) {
-                label.style.display = '';
+            // Always wrap text to at most two lines
+            label.innerHTML = wrapTextToTwoLines(school.name);
+            
+            // Show/hide school name based on zoom level
+            if (z >= 12 && z <= 15) {
+                // Always visible at zoom 12-15
+                label.classList.remove('hover-only');
+                label.style.display = 'flex';
+            } else if (z <= 11) {
+                // Hidden by default, show only on hover at zoom 11 and below
+                label.classList.add('hover-only');
+                // Remove inline display style so CSS can control it
+                if (label.style.display) {
+                    label.style.removeProperty('display');
+                }
             } else {
                 label.style.display = 'none';
+                label.classList.remove('hover-only');
             }
         }
     });

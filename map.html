@@ -130,13 +130,18 @@
             left: 0;
             transform: translate(-50%, 0);
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            flex-direction: row;
+            align-items: flex-end;
+            gap: 8px;
         }
         .nmsf-chart {
             display: flex;
             gap: 2px;
             align-items: flex-end;
+            position: relative;
+            background: rgba(240, 240, 240, 0.6);
+            padding: 1px;
+            border-radius: 2px;
         }
         .nmsf-bar-wrap {
             position: relative;
@@ -198,18 +203,33 @@
             display: block;
         }
         .nmsf-label {
-            margin-top: 4px;
             font-size: 13px;
             font-weight: 700;
             color: #0b3d91;
             text-shadow: 0 1px 3px #fff;
-            white-space: nowrap;
+            white-space: normal;
+            word-wrap: break-word;
+            text-align: left;
+            line-height: 1.2;
             font-family: "Arial Narrow", Arial, sans-serif;
+            max-width: 150px;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .nmsf-label.hover-only {
+            display: none !important;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .nmsf-wrapper:hover .nmsf-label.hover-only {
+            display: flex !important;
         }
 
         #zoom-level {
             position: absolute;
-            top: 50px;
+            top: 80px;
             left: 10px;
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid #aaa;
@@ -217,6 +237,42 @@
             padding: 4px 8px;
             font: 12px sans-serif;
             z-index: 1000;
+        }
+
+        #map-title {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+        }
+
+        #map-title h1 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        #map-title .subtitle {
+            font-size: 12px;
+            color: #666;
+        }
+
+        #map-title a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        #map-title a:hover {
+            text-decoration: underline;
         }
 
         .county-tooltip {
@@ -230,6 +286,13 @@
 </head>
 <body>
     <div id="map"></div>
+    <div id="map-title">
+        <h1>Dallas-Fort Worth Area National Merit Semifinalists</h1>
+        <div class="subtitle">
+            <a href="about.html">What is this?</a> | 
+            Credit: <a href="https://github.com/BenjaminJL2020" target="_blank">Github/BenjaminJL2020</a>
+        </div>
+    </div>
     <div id="zoom-level">Zoom: …</div>
 
     <div id="controls" class="map-controls">
