@@ -139,8 +139,8 @@
             gap: 2px;
             align-items: flex-end;
             position: relative;
-            background: rgba(240, 240, 240, 0.6);
-            padding: 1px;
+            background: rgba(240, 240, 240, 0.4);
+            padding: 3px;
             border-radius: 2px;
         }
         .nmsf-bar-wrap {
@@ -218,9 +218,14 @@
         }
 
         .nmsf-label.hover-only {
+            position: absolute;
+            left: 100%;
+            margin-left: 8px;
+            bottom: 0;
             display: none !important;
             pointer-events: none;
             z-index: 1000;
+            white-space: normal;
         }
 
         .nmsf-wrapper:hover .nmsf-label.hover-only {

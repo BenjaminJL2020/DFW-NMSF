@@ -2,7 +2,8 @@
 // MAP SETUP
 // ========================================
 const map = L.map('map', {
-    preferCanvas: true
+    preferCanvas: true,
+    minZoom: 10
 }).setView([32.95, -96.85], 10);
 
 const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
