@@ -1,0 +1,686 @@
+[
+  {
+    "2025": 10,
+    "2024": 10,
+    "2023": 8,
+    "2022": 6,
+    "Name": "Greenhill School",
+    "Coords": "32.9418605,-96.8463216",
+    "private-public": "private"
+  },
+  {
+    "2025": 2,
+    "2024": 1,
+    "2023": 4,
+    "2022": 7,
+    "Name": "Trinity Christian Academy",
+    "Coords": "32.9845395,-96.8353259",
+    "private-public": "private"
+  },
+  {
+    "2025": 26,
+    "2024": 42,
+    "2023": 43,
+    "2022": 31,
+    "Name": "Allen H.S.",
+    "Coords": "33.1096682,-96.663334",
+    "private-public": "public"
+  },
+  {
+    "2025": 3,
+    "2024": 1,
+    "2023": 2,
+    "2022": 5,
+    "Name": "Argyle H.S.",
+    "Coords": "33.0735211,-97.2104024",
+    "private-public": "public"
+  },
+  {
+    "2025": 4,
+    "2024": 4,
+    "2023": 3,
+    "2022": 6,
+    "Name": "James F. Martin H.S.",
+    "Coords": "32.6845475,-97.1826107",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 0,
+    "2023": 3,
+    "2022": 1,
+    "Name": "Oakridge School",
+    "Coords": "32.7236767,-97.1971009",
+    "private-public": "private"
+  },
+  {
+    "2025": 18,
+    "2024": 29,
+    "2023": 20,
+    "2022": 14,
+    "Name": "Hebron H.S.",
+    "Coords": "33.0359516,-96.8612905",
+    "private-public": "public"
+  },
+  {
+    "2025": 1,
+    "2024": 1,
+    "2023": 4,
+    "2022": 6,
+    "Name": "Newman Smith H.S.",
+    "Coords": "32.9791021,-96.8948267",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 6,
+    "2023": 1,
+    "2022": 0,
+    "Name": "R.L. Turner H.S.",
+    "Coords": "32.9484886,-96.8938788",
+    "private-public": "public"
+  },
+  {
+    "2025": 9,
+    "2024": 6,
+    "2023": 4,
+    "2022": 5,
+    "Name": "Colleyville Heritage H.S.",
+    "Coords": "32.8863052,-97.106836",
+    "private-public": "public"
+  },
+  {
+    "2025": 45,
+    "2024": 50,
+    "2023": 48,
+    "2022": 31,
+    "Name": "Coppell H.S.",
+    "Coords": "32.9746757,-97.0012804",
+    "private-public": "public"
+  },
+  {
+    "2025": 1,
+    "2024": 2,
+    "2023": 3,
+    "2022": 0,
+    "Name": "Episcopal School of Dallas",
+    "Coords": "32.8870837,-96.8441509",
+    "private-public": "private"
+  },
+  {
+    "2025": 18,
+    "2024": 15,
+    "2023": 13,
+    "2022": 16,
+    "Name": "Highland Park H.S.",
+    "Coords": "32.8474186,-96.8099692",
+    "private-public": "public"
+  },
+  {
+    "2025": 19,
+    "2024": 13,
+    "2023": 24,
+    "2022": 26,
+    "Name": "Hockaday H.S.",
+    "Coords": "32.9071268,-96.8307797",
+    "private-public": "private"
+  },
+  {
+    "2025": 12,
+    "2024": 5,
+    "2023": 3,
+    "2022": 6,
+    "Name": "Jesuit Dallas",
+    "Coords": "32.9185789,-96.8231512",
+    "private-public": "private"
+  },
+  {
+    "2025": 6,
+    "2024": 14,
+    "2023": 13,
+    "2022": 10,
+    "Name": "School for the Talented and Gifted",
+    "Coords": "32.7519439,-96.8090376",
+    "private-public": "public"
+  },
+  {
+    "2025": 4,
+    "2024": 9,
+    "2023": 4,
+    "2022": 5,
+    "Name": "School of Science and Engineering",
+    "Coords": "32.7521178,-96.8089564",
+    "private-public": "public"
+  },
+  {
+    "2025": 35,
+    "2024": 29,
+    "2023": 25,
+    "2022": 24,
+    "Name": "St. Mark's School Of Texas",
+    "Coords": "32.8907378,-96.8038761",
+    "private-public": "private"
+  },
+  {
+    "2025": 4,
+    "2024": 2,
+    "2023": 1,
+    "2022": 5,
+    "Name": "Ursuline Academy of Dallas",
+    "Coords": "32.8778963,-96.8265428",
+    "private-public": "private"
+  },
+  {
+    "2025": 0,
+    "2024": 1,
+    "2023": 3,
+    "2022": 1,
+    "Name": "Booker T. Washington High School for the Performing and Visual Arts",
+    "Coords": "32.7915532,-96.7993309",
+    "private-public": "public"
+  },
+  {
+    "2025": 1,
+    "2024": 1,
+    "2023": 1,
+    "2022": 1,
+    "Name": "Denton High School",
+    "Coords": "33.2506126,-97.1687028",
+    "private-public": "public"
+  },
+  {
+    "2025": 3,
+    "2024": 0,
+    "2023": 3,
+    "2022": 1,
+    "Name": "John H. Guyer High School",
+    "Coords": "33.1352729,-97.1065416",
+    "private-public": "public"
+  },
+  {
+    "2025": 24,
+    "2024": 23,
+    "2023": 32,
+    "2022": 40,
+    "Name": "Texas Academy of Mathematics and Science",
+    "Coords": "33.2107126,-97.1495408",
+    "private-public": "public"
+  },
+  {
+    "2025": 1,
+    "2024": 2,
+    "2023": 3,
+    "2022": 2,
+    "Name": "Trinity H.S.",
+    "Coords": "32.842987,-97.1019842",
+    "private-public": "public"
+  },
+  {
+    "2025": 20,
+    "2024": 32,
+    "2023": 36,
+    "2022": 29,
+    "Name": "Flower Mound H.S.",
+    "Coords": "33.0332132,-97.0846526",
+    "private-public": "public"
+  },
+  {
+    "2025": 17,
+    "2024": 18,
+    "2023": 8,
+    "2022": 16,
+    "Name": "Marcus H.S.",
+    "Coords": "33.0643612,-97.0651467",
+    "private-public": "public"
+  },
+  {
+    "2025": 1,
+    "2024": 2,
+    "2023": 1,
+    "2022": 6,
+    "Name": "Fort Worth Country Day School",
+    "Coords": "32.6928085,-97.4101472",
+    "private-public": "private"
+  },
+  {
+    "2025": 0,
+    "2024": 3,
+    "2023": 5,
+    "2022": 3,
+    "Name": "R.L. Paschal H.S.",
+    "Coords": "32.707936,-97.352942",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 3,
+    "2023": 2,
+    "2022": 2,
+    "Name": "Timber Creek H.S.",
+    "Coords": "32.94972,-97.2898925",
+    "private-public": "public"
+  },
+  {
+    "2025": 5,
+    "2024": 4,
+    "2023": 3,
+    "2022": 2,
+    "Name": "Trinity Valley School",
+    "Coords": "32.6546298,-97.4299396",
+    "private-public": "private"
+  },
+  {
+    "2025": 19,
+    "2024": 23,
+    "2023": 26,
+    "2022": 20,
+    "Name": "Centennial H.S.",
+    "Coords": "33.1365773,-96.7721332",
+    "private-public": "public"
+  },
+  {
+    "2025": 7,
+    "2024": 11,
+    "2023": 8,
+    "2022": 8,
+    "Name": "Frisco H.S.",
+    "Coords": "33.1318133,-96.8241032",
+    "private-public": "public"
+  },
+  {
+    "2025": 13,
+    "2024": 11,
+    "2023": 13,
+    "2022": 7,
+    "Name": "Heritage H.S.",
+    "Coords": "33.1759748,-96.7574949",
+    "private-public": "public"
+  },
+  {
+    "2025": 23,
+    "2024": 17,
+    "2023": 4,
+    "2022": 11,
+    "Name": "Independence H.S.",
+    "Coords": "33.1645621,-96.7557643",
+    "private-public": "public"
+  },
+  {
+    "2025": 15,
+    "2024": 17,
+    "2023": 14,
+    "2022": 16,
+    "Name": "Lebanon Trail H.S.",
+    "Coords": "33.1221185,-96.802033",
+    "private-public": "public"
+  },
+  {
+    "2025": 23,
+    "2024": 16,
+    "2023": 15,
+    "2022": 25,
+    "Name": "Liberty H.S.",
+    "Coords": "33.1392253,-96.7452584",
+    "private-public": "public"
+  },
+  {
+    "2025": 6,
+    "2024": 4,
+    "2023": 2,
+    "2022": 9,
+    "Name": "Lone Star H.S.",
+    "Coords": "33.1909898,-96.8696902",
+    "private-public": "public"
+  },
+  {
+    "2025": 5,
+    "2024": 0,
+    "2023": 3,
+    "2022": 3,
+    "Name": "Memorial H.S.",
+    "Coords": "33.1798998,-96.831693",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 1,
+    "2023": 2,
+    "2022": 0,
+    "Name": "Panther Creek H.S.",
+    "Coords": "33.2141949,-96.8658448",
+    "private-public": "public"
+  },
+  {
+    "2025": 20,
+    "2024": 16,
+    "2023": 15,
+    "2022": 12,
+    "Name": "Rick Reedy H.S.",
+    "Coords": "33.131452,-96.8669929",
+    "private-public": "public"
+  },
+  {
+    "2025": 4,
+    "2024": 5,
+    "2023": 6,
+    "2022": 3,
+    "Name": "Rock Hill H.S.",
+    "Coords": "33.209369,-96.7719605",
+    "private-public": "public"
+  },
+  {
+    "2025": 5,
+    "2024": 11,
+    "2023": 4,
+    "2022": 9,
+    "Name": "Wakeland H.S.",
+    "Coords": "33.1679925,-96.8480603",
+    "private-public": "public"
+  },
+  {
+    "2025": 7,
+    "2024": 2,
+    "2023": 6,
+    "2022": 3,
+    "Name": "Garland H.S.",
+    "Coords": "32.9101553,-96.6490687",
+    "private-public": "public"
+  },
+  {
+    "2025": 1,
+    "2024": 3,
+    "2023": 0,
+    "2022": 0,
+    "Name": "North Garland H.S.",
+    "Coords": "32.9313233,-96.6614748",
+    "private-public": "public"
+  },
+  {
+    "2025": 8,
+    "2024": 10,
+    "2023": 10,
+    "2022": 11,
+    "Name": "Grapevine H.S.",
+    "Coords": "32.915943,-97.1214976",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 4,
+    "2023": 2,
+    "2022": 0,
+    "Name": "L.D. Bell H.S.",
+    "Coords": "32.8428771,-97.1630767",
+    "private-public": "public"
+  },
+  {
+    "2025": 3,
+    "2024": 10,
+    "2023": 8,
+    "2022": 5,
+    "Name": "Cistercian Preparatory School",
+    "Coords": "32.8551892,-96.9245457",
+    "private-public": "private"
+  },
+  {
+    "2025": 2,
+    "2024": 1,
+    "2023": 1,
+    "2022": 0,
+    "Name": "Great Hearts Irving Upper School",
+    "Coords": "32.8810088,-96.9956626",
+    "private-public": "public charter"
+  },
+  {
+    "2025": 2,
+    "2024": 4,
+    "2023": 1,
+    "2022": 5,
+    "Name": "Uplift North Hills Preparatory",
+    "Coords": "32.8944852,-96.9361885",
+    "private-public": "public charter"
+  },
+  {
+    "2025": 1,
+    "2024": 5,
+    "2023": 3,
+    "2022": 9,
+    "Name": "Keller H.S.",
+    "Coords": "32.9397372,-97.2389423",
+    "private-public": "public"
+  },
+  {
+    "2025": 1,
+    "2024": 2,
+    "2023": 3,
+    "2022": 1,
+    "Name": "Founders Classical Academy of Lewisville",
+    "Coords": "33.0273403,-98.2443999",
+    "private-public": "public charter"
+  },
+  {
+    "2025": 7,
+    "2024": 13,
+    "2023": 6,
+    "2022": 7,
+    "Name": "Lovejoy H.S.",
+    "Coords": "33.1015348,-96.6160308",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 2,
+    "2023": 0,
+    "2022": 0,
+    "Name": "Frontier STEM Academy",
+    "Coords": "32.5926444,-97.1624183",
+    "private-public": "public"
+  },
+  {
+    "2025": 1,
+    "2024": 3,
+    "2023": 2,
+    "2022": 0,
+    "Name": "Lake Ridge H.S.",
+    "Coords": "32.5716416,-97.0580038",
+    "private-public": "public"
+  },
+  {
+    "2025": 9,
+    "2024": 6,
+    "2023": 5,
+    "2022": 0,
+    "Name": "Emerson H.S.",
+    "Coords": "33.1466834,-96.701733",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 1,
+    "2023": 6,
+    "2022": 0,
+    "Name": "Imagine International Academy of North Texas",
+    "Coords": "33.2006318,-96.6588511",
+    "private-public": "public charter"
+  },
+  {
+    "2025": 2,
+    "2024": 4,
+    "2023": 3,
+    "2022": 2,
+    "Name": "McKinney Boyd H.S.",
+    "Coords": "33.202866,-96.6815204",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 2,
+    "2023": 3,
+    "2022": 1,
+    "Name": "McKinney H.S.",
+    "Coords": "33.1882113,-96.6353883",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 2,
+    "2023": 1,
+    "2022": 3,
+    "Name": "Coram Deo Academy - Collin County",
+    "Coords": "33.110268,-96.7541252",
+    "private-public": "private"
+  },
+  {
+    "2025": 0,
+    "2024": 3,
+    "2023": 1,
+    "2022": 0,
+    "Name": "John Paul II H.S.",
+    "Coords": "33.0120568,-96.7669176",
+    "private-public": "private"
+  },
+  {
+    "2025": 25,
+    "2024": 28,
+    "2023": 22,
+    "2022": 33,
+    "Name": "Plano East Senior H.S.",
+    "Coords": "33.0402547,-96.6495474",
+    "private-public": "public"
+  },
+  {
+    "2025": 11,
+    "2024": 10,
+    "2023": 9,
+    "2022": 8,
+    "Name": "Plano Senior H.S.",
+    "Coords": "33.0287723,-96.7880639",
+    "private-public": "public"
+  },
+  {
+    "2025": 37,
+    "2024": 49,
+    "2023": 43,
+    "2022": 63,
+    "Name": "Plano West Senior H.S.",
+    "Coords": "33.0434006,-96.8162296",
+    "private-public": "public"
+  },
+  {
+    "2025": 1,
+    "2024": 1,
+    "2023": 3,
+    "2022": 4,
+    "Name": "Prestonwood Christian Academy",
+    "Coords": "33.0288723,-96.8545377",
+    "private-public": "private"
+  },
+  {
+    "2025": 14,
+    "2024": 7,
+    "2023": 5,
+    "2022": 2,
+    "Name": "Prosper H.S.",
+    "Coords": "33.2591995,-96.8010064",
+    "private-public": "public"
+  },
+  {
+    "2025": 5,
+    "2024": 2,
+    "2023": 0,
+    "2022": 0,
+    "Name": "Walnut Grove H.S.",
+    "Coords": "33.2324061,-96.7506108",
+    "private-public": "public"
+  },
+  {
+    "2025": 0,
+    "2024": 1,
+    "2023": 0,
+    "2022": 3,
+    "Name": "LV Berkner High School STEM Academy",
+    "Coords": "32.9362174,-96.6957176",
+    "private-public": "public"
+  },
+  {
+    "2025": 3,
+    "2024": 3,
+    "2023": 4,
+    "2022": 4,
+    "Name": "J. J. Pearce H.S.",
+    "Coords": "32.9725972,-96.7702921",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 3,
+    "2023": 5,
+    "2022": 2,
+    "Name": "Richardson H.S.",
+    "Coords": "32.952851,-96.7645978",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 1,
+    "2023": 2,
+    "2022": 2,
+    "Name": "Rockwall H.S.",
+    "Coords": "32.9047454,-96.4611689",
+    "private-public": "public"
+  },
+  {
+    "2025": 2,
+    "2024": 0,
+    "2023": 1,
+    "2022": 1,
+    "Name": "Sachse H.S.",
+    "Coords": "32.9615405,-96.5873768",
+    "private-public": "public"
+  },
+  {
+    "2025": 32,
+    "2024": 35,
+    "2023": 40,
+    "2022": 41,
+    "Name": "Carroll Senior H.S.",
+    "Coords": "32.938893,-97.1772176",
+    "private-public": "public"
+  },
+  {
+    "2025": 3,
+    "2024": 2,
+    "2023": 3,
+    "2022": 6,
+    "Name": "Byron Nelson H.S.",
+    "Coords": "33.0188625,-97.2053559",
+    "private-public": "public"
+  },
+  {
+    "2025": 0,
+    "2024": 1,
+    "2023": 2,
+    "2022": 1,
+    "Name": "Westlake Academy",
+    "Coords": "32.9851518,-97.2144853",
+    "private-public": "public charter"
+  },
+  {
+    "2025": 0,
+    "2024": 2,
+    "2023": 1,
+    "2022": 1,
+    "Name": "Wylie East H.S.",
+    "Coords": "33.0168863,-96.4971742",
+    "private-public": "public"
+  },
+  {
+    "2025": 1,
+    "2024": 2,
+    "2023": 3,
+    "2022": 1,
+    "Name": "Wylie H.S.",
+    "Coords": "33.0089542,-96.5747162",
+    "private-public": "public"
+  }
+]
