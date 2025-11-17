@@ -20,20 +20,19 @@ let countiesLayer = null;
 let selectedCountyLayer = null;
 let selectedCountyTooltip = null;
 
-// Color palette for counties (different colors for each)
+// Only show these counties
+const wantedCounties = ['Dallas County', 'Collin County', 'Denton County', 'Tarrant County', 'Rockwall County'];
+
+// Color palette for counties (different color for each of the 5 counties)
 const countyColors = [
-    'rgba(255, 200, 200, 0.3)',  // Light red
-    'rgba(200, 255, 200, 0.3)',  // Light green
-    'rgba(200, 200, 255, 0.3)',  // Light blue
-    'rgba(255, 255, 200, 0.3)',  // Light yellow
-    'rgba(255, 200, 255, 0.3)',  // Light magenta
-    'rgba(200, 255, 255, 0.3)',  // Light cyan
-    'rgba(255, 220, 200, 0.3)',  // Light orange
-    'rgba(220, 200, 255, 0.3)',  // Light purple
+    'rgba(255, 200, 200, 0.3)',  // Light red - Dallas
+    'rgba(200, 255, 200, 0.3)',  // Light green - Collin
+    'rgba(200, 200, 255, 0.3)',  // Light blue - Denton
+    'rgba(255, 255, 200, 0.3)',  // Light yellow - Tarrant
+    'rgba(255, 200, 255, 0.3)',  // Light magenta - Rockwall
 ];
 
-let countyColorIndex = 0;
-const countyColorMap = new Map(); // Map FIPS to color
+const countyColorMap = new Map(); // Map county name to color
 
 // Layer control
 const baseMaps = {
@@ -365,13 +364,11 @@ function initMinTotalSlider(maxTotal) {
 // ========================================
 function clearCountySelection() {
     if (selectedCountyLayer) {
-        const fips = selectedCountyLayer.feature.properties.FIPS;
-        const color = countyColorMap.get(fips) || 'rgba(200, 200, 200, 0.3)';
         selectedCountyLayer.setStyle({
             fillColor: 'transparent',
             fillOpacity: 0,
-            color: '#555',
-            weight: 2
+            color: 'transparent',  // Hide boundary line
+            weight: 0
         });
         selectedCountyLayer = null;
     }
@@ -390,20 +387,26 @@ async function loadCountyBoundaries() {
         }
         const geojson = await response.json();
         
+        // Initialize color map for wanted counties
+        wantedCounties.forEach((countyName, index) => {
+            countyColorMap.set(countyName, countyColors[index]);
+        });
+        
         countiesLayer = L.geoJSON(geojson, {
+            filter: (feature) => {
+                // Only include wanted counties
+                const countyName = feature.properties.COUNTY;
+                return wantedCounties.includes(countyName);
+            },
             style: {
-                color: '#555',
-                weight: 2,
+                color: 'transparent',  // Hide boundary lines by default
+                weight: 0,
                 fill: false,
                 fillOpacity: 0
             },
             onEachFeature: (feature, layer) => {
-                // Assign a color to each county
-                const fips = feature.properties.FIPS;
-                if (!countyColorMap.has(fips)) {
-                    countyColorMap.set(fips, countyColors[countyColorIndex % countyColors.length]);
-                    countyColorIndex++;
-                }
+                const countyName = feature.properties.COUNTY;
+                const color = countyColorMap.get(countyName);
                 
                 layer.on('click', (e) => {
                     L.DomEvent.stopPropagation(e);
@@ -417,25 +420,23 @@ async function loadCountyBoundaries() {
                     // Clear previous selection
                     clearCountySelection();
                     
-                    // Select this county
-                    const color = countyColorMap.get(fips);
+                    // Select this county - show boundary line and shade
                     layer.setStyle({
                         fillColor: color,
                         fillOpacity: 0.4,
                         color: '#333',
-                        weight: 3
+                        weight: 2
                     });
                     selectedCountyLayer = layer;
                     
                     // Show county name
                     const center = layer.getBounds().getCenter();
-                    const countyName = feature.properties.COUNTY || feature.properties.NAME || 'County';
                     selectedCountyTooltip = L.tooltip({
                         permanent: true,
                         direction: 'center',
                         className: 'county-tooltip'
                     })
-                    .setContent('<strong style="font-size:14px;">' + countyName + '</strong>')
+                    .setContent('<strong style="font-size:14px;">' + countyName.replace(' County', '') + '</strong>')
                     .setLatLng(center)
                     .addTo(map);
                     
