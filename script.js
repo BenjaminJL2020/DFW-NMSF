@@ -9,12 +9,9 @@ const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
     maxZoom: 19
 }).addTo(map);
 
-// Marker cluster group for schools - disabled clustering so all charts always display
-const clusterGroup = L.markerClusterGroup({
-    disableClusteringAtZoom: 0,  // Never cluster - show all charts at all zoom levels
-    maxClusterRadius: 0  // Completely disable clustering
-});
-map.addLayer(clusterGroup);
+// Layer group for schools - no clustering so all charts always display
+const schoolLayerGroup = L.layerGroup();
+map.addLayer(schoolLayerGroup);
 
 // County boundaries GeoJSON layer (expects tx-counties.geojson in same folder)
 let countiesLayer = L.geoJSON(null, {
@@ -31,7 +28,7 @@ const baseMaps = {
 };
 
 const overlayMaps = {
-    'School markers': clusterGroup,
+    'School markers': schoolLayerGroup,
     'County boundaries': countiesLayer
 };
 
@@ -169,10 +166,10 @@ function passesFilters(school) {
 }
 
 function applyFilters() {
-    clusterGroup.clearLayers();
+    schoolLayerGroup.clearLayers();
     markers.forEach(({ marker, school }) => {
         if (passesFilters(school)) {
-            clusterGroup.addLayer(marker);
+            schoolLayerGroup.addLayer(marker);
         }
     });
     updateBarsForFilters();
@@ -278,7 +275,7 @@ function buildMarkers() {
         `);
         
         markers.push({ school, marker, iconEl: null });
-        clusterGroup.addLayer(marker);
+        schoolLayerGroup.addLayer(marker);
     });
     
     // Store icon elements after markers are added
@@ -451,18 +448,10 @@ map.on('zoom', () => {
     updateBarsForZoom();
 });
 
-// Update bars when markers are added/removed from clusters
-clusterGroup.on('animationend', () => {
+// Update bars when map view changes (for any marker visibility updates)
+map.on('moveend', () => {
     updateBarsForZoom();
     updateBarsForFilters();
-});
-
-// Also update when clusters are created/removed
-clusterGroup.on('clusteradd', () => {
-    setTimeout(() => {
-        updateBarsForZoom();
-        updateBarsForFilters();
-    }, 50);
 });
 
 // ========================================
