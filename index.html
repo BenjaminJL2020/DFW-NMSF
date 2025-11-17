@@ -1,367 +1,338 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>DFW NMSF – schools + counties</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    crossorigin=""
-  />
-  <style>
-    html, body, #map { height: 100%; margin: 0; }
+    <meta charset="UTF-8" />
+    <title>DFW NMSF Map</title>
 
-    .nmsf-marker {
-      width: 1px;
-      height: 1px;
-      background: transparent;
-      position: relative;
-    }
-    .nmsf-wrapper {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      transform: translate(-50%, 0);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .nmsf-chart {
-      display: flex;
-      gap: 4px;
-      align-items: flex-end;
-    }
-    .nmsf-bar-wrap {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .nmsf-bar {
-      background: rgba(31, 120, 180, 0.7);
-      border-radius: 3px 3px 0 0;
-    }
-    .nmsf-top-label {
-      position: absolute;
-      bottom: 100%;
-      transform: translateY(-8px);
-      background: rgba(255,255,255,0.95);
-      border: 1px solid #aaa;
-      border-radius: 3px;
-      padding: 2px 6px;
-      font-size: 11px;
-      font-weight: 700;
-      white-space: nowrap;
-      display: none;
-    }
-    .nmsf-bottom-label {
-      position: absolute;
-      top: 100%;
-      transform: translateY(8px);
-      background: rgba(255,255,255,0.95);
-      border: 1px solid #aaa;
-      border-radius: 3px;
-      padding: 1px 6px;
-      font-size: 11px;
-      font-weight: 700;
-      display: none;
-    }
-    .nmsf-bar-wrap:hover .nmsf-top-label,
-    .nmsf-bar-wrap:hover .nmsf-bottom-label {
-      display: block;
-    }
-    .nmsf-label {
-      margin-top: 4px;
-      font-size: 13px;
-      font-weight: 700;
-      color: #0b3d91;
-      text-shadow: 0 1px 3px #fff;
-    }
+    <!-- Leaflet CSS (no integrity / crossorigin) -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
 
-    #zoom-level {
-      position: absolute;
-      top: 10px; right: 10px;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid #aaa;
-      border-radius: 4px;
-      padding: 4px 8px;
-      font: 12px sans-serif;
-      z-index: 1000;
-    }
+    <!-- Leaflet.markercluster CSS -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    />
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    />
 
-    #controls {
-      position: absolute;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255,255,255,0.93);
-      border: 1px solid #aaa;
-      border-radius: 4px;
-      padding: 6px 10px;
-      font: 12px sans-serif;
-      z-index: 1000;
-    }
-    #controls label {
-      display: block;
-      margin-bottom: 4px;
-    }
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
 
-    #error {
-      position: absolute;
-      top: 10px; left: 10px;
-      background: #fff;
-      border: 1px solid #c00;
-      padding: 6px 10px;
-      font: 12px sans-serif;
-      display: none;
-      z-index: 1000;
-    }
-  </style>
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 13px;
+            max-width: 260px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+        }
+
+        .map-controls h3 {
+            margin: 0 0 6px 0;
+            font-size: 14px;
+        }
+
+        .map-controls strong {
+            font-size: 13px;
+        }
+
+        .map-controls label {
+            white-space: nowrap;
+        }
+
+        .map-controls input[type="range"] {
+            width: 100%;
+        }
+
+        .school-marker {
+            border-radius: 50%;
+            border: 2px solid #333;
+            width: 18px;
+            height: 18px;
+            background-clip: padding-box;
+        }
+
+        .school-marker.sector-public {
+            background-color: #1f77b4;
+        }
+
+        .school-marker.sector-private {
+            background-color: #ff7f0e;
+        }
+
+        .school-marker.sector-charter {
+            background-color: #2ca02c;
+        }
+
+        .legend-control {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+
+        .legend-swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+            border: 1px solid #333;
+        }
+
+        .legend-swatch.public {
+            background-color: #1f77b4;
+        }
+
+        .legend-swatch.private {
+            background-color: #ff7f0e;
+        }
+
+        .legend-swatch.charter {
+            background-color: #2ca02c;
+        }
+
+        .nmsf-marker {
+            width: 1px;
+            height: 1px;
+            background: transparent;
+            position: relative;
+        }
+        .nmsf-wrapper {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            transform: translate(-50%, 0);
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            gap: 8px;
+        }
+        .nmsf-chart {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+            position: relative;
+            background: rgba(240, 240, 240, 0.4);
+            padding: 3px;
+            border-radius: 2px;
+        }
+        .nmsf-bar-wrap {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .nmsf-bar {
+            background: rgba(31, 120, 180, 0.7);
+            border-radius: 3px 3px 0 0;
+            min-height: 4px;
+            cursor: pointer;
+            min-width: 8px;
+        }
+        .nmsf-bar.sector-public {
+            background: rgba(31, 120, 180, 0.7);
+        }
+        .nmsf-bar.sector-private {
+            background: rgba(255, 127, 14, 0.7);
+        }
+        .nmsf-bar.sector-charter {
+            background: rgba(44, 160, 44, 0.7);
+        }
+        .nmsf-bar.hidden {
+            display: none;
+        }
+        .nmsf-top-label {
+            position: absolute;
+            bottom: 100%;
+            transform: translateY(-8px);
+            background: rgba(255,255,255,0.95);
+            border: 1px solid #aaa;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            display: none;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .nmsf-bottom-label {
+            position: absolute;
+            top: 100%;
+            transform: translateY(8px);
+            background: rgba(255,255,255,0.95);
+            border: 1px solid #aaa;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            display: none;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .nmsf-bar-wrap:hover .nmsf-top-label,
+        .nmsf-bar-wrap:hover .nmsf-bottom-label {
+            display: block;
+        }
+        .nmsf-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0b3d91;
+            text-shadow: 0 1px 3px #fff;
+            white-space: normal;
+            word-wrap: break-word;
+            text-align: left;
+            line-height: 1.2;
+            font-family: "Arial Narrow", Arial, sans-serif;
+            max-width: 150px;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .nmsf-label.hover-only {
+            position: absolute;
+            left: 100%;
+            margin-left: 8px;
+            bottom: 0;
+            display: none !important;
+            pointer-events: none;
+            z-index: 1000;
+            white-space: normal;
+        }
+
+        .nmsf-wrapper:hover .nmsf-label.hover-only {
+            display: flex !important;
+        }
+
+        #zoom-level {
+            position: absolute;
+            top: 80px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font: 12px sans-serif;
+            z-index: 1000;
+        }
+
+        #map-title {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+        }
+
+        #map-title h1 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        #map-title .subtitle {
+            font-size: 12px;
+            color: #666;
+        }
+
+        #map-title a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        #map-title a:hover {
+            text-decoration: underline;
+        }
+
+        .county-tooltip {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #333;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-  <div id="map"></div>
-  <div id="zoom-level">Zoom: …</div>
-  <div id="controls">
-    <label><input type="checkbox" id="chk-public" checked> Public Schools</label>
-    <label><input type="checkbox" id="chk-private" checked> Private Schools</label>
-  </div>
-  <div id="error"></div>
+    <div id="map"></div>
+    <div id="map-title">
+        <h1>Dallas-Fort Worth Area National Merit Semifinalists</h1>
+        <div class="subtitle">
+            <a href="about.html">What is this?</a> | 
+            Credit: <a href="https://github.com/BenjaminJL2020" target="_blank">Github/BenjaminJL2020</a>
+        </div>
+    </div>
+    <div id="zoom-level">Zoom: …</div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script>
-    // 1) map
-    const map = L.map('map').setView([32.9, -97.0], 9);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-    L.control.scale().addTo(map);
+    <div id="controls" class="map-controls">
+        <h3>Filters</h3>
 
-    const zoomEl = document.getElementById('zoom-level');
-    function updateZoomLabel() { zoomEl.textContent = 'Zoom: ' + map.getZoom(); }
+        <div>
+            <strong>Years</strong>
+            <div id="yearFilters"></div>
+        </div>
 
-    // 2) county layer (re-added)
-    const wantedFips = ['48085','48113','48121','48439']; // Collin, Dallas, Denton, Tarrant
-    let selectedCountyLayer = null;
-    let selectedCountyTooltip = null;
+        <div style="margin-top:8px;">
+            <strong>School type</strong>
+            <div id="sectorFilters">
+                <label><input type="checkbox" class="sector-filter" value="public" checked> Public</label><br />
+                <label><input type="checkbox" class="sector-filter" value="private" checked> Private</label><br />
+                <label><input type="checkbox" class="sector-filter" value="public charter" checked> Charter</label>
+            </div>
+        </div>
 
-    function clearCountySelection() {
-      if (selectedCountyLayer) {
-        selectedCountyLayer.setStyle({ fillOpacity: 0.1, fillColor: '#cccccc' });
-        selectedCountyLayer = null;
-      }
-      if (selectedCountyTooltip) {
-        map.removeLayer(selectedCountyTooltip);
-        selectedCountyTooltip = null;
-      }
-    }
-    function showError(msg) {
-      const el = document.getElementById('error');
-      el.textContent = msg;
-      el.style.display = 'block';
-    }
+        <div style="margin-top:8px;">
+            <strong>Minimum total (selected years)</strong>
+            <div>
+                <input type="range" id="minTotal" min="0" max="80" value="0" />
+                <span id="minTotalLabel">0</span>
+            </div>
+        </div>
+    </div>
 
-    fetch('tx-counties.geojson')
-      .then(r => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
-      .then(geo => {
-        const countyLayer = L.geoJSON(geo, {
-          filter: f => f.properties && wantedFips.includes(f.properties.FIPS),
-          style: {
-            color: '#555',
-            weight: 2,
-            fillColor: '#cccccc',
-            fillOpacity: 0.1
-          },
-          onEachFeature: (f, layer) => {
-            layer.on('click', e => {
-              L.DomEvent.stopPropagation(e);
-              if (selectedCountyLayer === layer) {
-                clearCountySelection();
-                return;
-              }
-              clearCountySelection();
-              layer.setStyle({ fillColor: 'rgba(0,0,255,0.3)', fillOpacity: 0.35 });
-              selectedCountyLayer = layer;
+    <!-- Leaflet JS (no integrity / crossorigin) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-              const center = layer.getBounds().getCenter();
-              selectedCountyTooltip = L.tooltip({
-                permanent: true,
-                direction: 'right',
-                offset: [12, 0]
-              })
-              .setContent('<strong style="font-size:14px;">' + (f.properties.COUNTY || 'County') + '</strong>')
-              .setLatLng(center)
-              .addTo(map);
+    <!-- Leaflet.markercluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-              layer.bringToFront();
-            });
-          }
-        }).addTo(map);
-
-        // fit to the four counties
-        if (countyLayer.getLayers().length > 0) {
-          map.fitBounds(countyLayer.getBounds());
-        }
-
-        map.on('click', () => clearCountySelection());
-      })
-      .catch(err => {
-        console.error(err);
-        showError('Could not load tx-counties.geojson.');
-      });
-
-    // 3) school data
-    const schools = [
-      {
-        name: 'Greenhill School',
-        lat: 32.941856,
-        lng: -96.8463216,
-        type: 'private',
-        semis: { 2022: 6, 2023: 8, 2024: 10, 2025: 10 }
-      },
-      {
-        name: 'Allen H.S.',
-        lat: 33.1096682,
-        lng: -96.6633394,
-        type: 'public',
-        semis: { 2022: 31, 2023: 43, 2024: 42, 2025: 26 }
-      }
-    ];
-
-    // global scale
-    const allVals = [];
-    schools.forEach(s => {
-      allVals.push(s.semis[2022], s.semis[2023], s.semis[2024], s.semis[2025]);
-    });
-    const GLOBAL_MAX = Math.max.apply(null, allVals); // 43
-    const COLOR_PUBLIC = 'rgba(31, 120, 180, 0.7)';
-    const COLOR_PRIVATE = 'rgba(128, 0, 128, 0.7)';
-
-    // zoom → height
-    function maxHeightForZoom(z) {
-      if (z >= 19) return 300;
-      if (z === 18) return 275;
-      if (z === 17) return 250;
-      if (z === 16) return 225;
-      if (z === 15) return 200;
-      if (z === 14) return 175;
-      if (z === 13) return 150;
-      if (z === 12) return 125;
-      if (z === 11) return 100;
-      if (z === 10) return 75;
-      if (z === 9) return 50;
-      return 50;
-    }
-    // zoom → width
-    function barWidthForZoom(z) {
-      if (z >= 19) return 22;
-      if (z === 18) return 21;
-      if (z === 17) return 20;
-      if (z === 16) return 19;
-      if (z === 15) return 18;
-      if (z === 14) return 17;
-      if (z === 13) return 16;
-      if (z === 12) return 15;
-      if (z === 11) return 14;
-      if (z === 10) return 13;
-      if (z <= 9) return 12;
-      return 12;
-    }
-
-    // 4) add school markers
-    const schoolMarkers = []; // {school, marker, iconEl}
-
-    function makeSchoolHTML(school, idx, color) {
-      const y = school.semis;
-      return (
-        '<div class="nmsf-wrapper" data-school="' + idx + '">' +
-          '<div class="nmsf-chart">' +
-            '<div class="nmsf-bar-wrap">' +
-              '<div class="nmsf-top-label">' + y[2022] + ' NMSF</div>' +
-              '<div class="nmsf-bar" data-school="' + idx + '" data-year="2022" style="background:' + color + ';"></div>' +
-              '<div class="nmsf-bottom-label">2022</div>' +
-            '</div>' +
-            '<div class="nmsf-bar-wrap">' +
-              '<div class="nmsf-top-label">' + y[2023] + ' NMSF</div>' +
-              '<div class="nmsf-bar" data-school="' + idx + '" data-year="2023" style="background:' + color + ';"></div>' +
-              '<div class="nmsf-bottom-label">2023</div>' +
-            '</div>' +
-            '<div class="nmsf-bar-wrap">' +
-              '<div class="nmsf-top-label">' + y[2024] + ' NMSF</div>' +
-              '<div class="nmsf-bar" data-school="' + idx + '" data-year="2024" style="background:' + color + ';"></div>' +
-              '<div class="nmsf-bottom-label">2024</div>' +
-            '</div>' +
-            '<div class="nmsf-bar-wrap">' +
-              '<div class="nmsf-top-label">' + y[2025] + ' NMSF</div>' +
-              '<div class="nmsf-bar" data-school="' + idx + '" data-year="2025" style="background:' + color + ';"></div>' +
-              '<div class="nmsf-bottom-label">2025</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="nmsf-label">' + school.name + '</div>' +
-        '</div>'
-      );
-    }
-
-    schools.forEach((s, idx) => {
-      const color = s.type === 'public' ? COLOR_PUBLIC : COLOR_PRIVATE;
-      const html = makeSchoolHTML(s, idx, color);
-      const icon = L.divIcon({
-        className: 'nmsf-marker',
-        html,
-        iconSize: [1, 1],
-        iconAnchor: [0, 0]
-      });
-      const marker = L.marker([s.lat, s.lng], { icon }).addTo(map);
-      schoolMarkers.push({ school: s, marker, iconEl: marker._icon });
-    });
-
-    function updateBarsForZoom() {
-      const z = map.getZoom();
-      const maxH = maxHeightForZoom(z);
-      const barW = barWidthForZoom(z);
-      schoolMarkers.forEach(({ school, iconEl }, idx) => {
-        if (!iconEl) return;
-        const bars = iconEl.querySelectorAll('.nmsf-bar[data-school="' + idx + '"]');
-        bars.forEach(bar => {
-          const year = bar.getAttribute('data-year');
-          const val = school.semis[year];
-          bar.style.height = Math.max(4, (val / GLOBAL_MAX) * maxH) + 'px';
-          bar.style.width = barW + 'px';
-        });
-      });
-    }
-
-    // 5) filters
-    const chkPublic = document.getElementById('chk-public');
-    const chkPrivate = document.getElementById('chk-private');
-
-    function applyFilters() {
-      schoolMarkers.forEach(({ school, marker }) => {
-        if (school.type === 'public') {
-          marker._icon.style.display = chkPublic.checked ? 'block' : 'none';
-        } else {
-          marker._icon.style.display = chkPrivate.checked ? 'block' : 'none';
-        }
-      });
-    }
-
-    chkPublic.addEventListener('change', applyFilters);
-    chkPrivate.addEventListener('change', applyFilters);
-
-    map.on('zoomend', () => {
-      updateZoomLabel();
-      updateBarsForZoom();
-    });
-
-    map.whenReady(() => {
-      updateZoomLabel();
-      updateBarsForZoom();
-      applyFilters();
-    });
-  </script>
+    <!-- Your application script -->
+    <script src="script.js"></script>
 </body>
 </html>
