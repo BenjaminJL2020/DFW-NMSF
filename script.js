@@ -24,12 +24,13 @@ let selectedCountyTooltip = null;
 const wantedCounties = ['Dallas County', 'Collin County', 'Denton County', 'Tarrant County', 'Rockwall County'];
 
 // Color palette for counties (different color for each of the 5 counties)
+// Using rgb (not rgba) so fillOpacity can properly control transparency
 const countyColors = [
-    'rgba(255, 200, 200, 0.3)',  // Light red - Dallas
-    'rgba(200, 255, 200, 0.3)',  // Light green - Collin
-    'rgba(200, 200, 255, 0.3)',  // Light blue - Denton
-    'rgba(255, 255, 200, 0.3)',  // Light yellow - Tarrant
-    'rgba(255, 200, 255, 0.3)',  // Light magenta - Rockwall
+    '#ffc8c8',  // Light red - Dallas
+    '#c8ffc8',  // Light green - Collin
+    '#c8c8ff',  // Light blue - Denton
+    '#ffffc8',  // Light yellow - Tarrant
+    '#ffc8ff',  // Light magenta - Rockwall
 ];
 
 const countyColorMap = new Map(); // Map county name to color
@@ -365,6 +366,7 @@ function initMinTotalSlider(maxTotal) {
 function clearCountySelection() {
     if (selectedCountyLayer) {
         selectedCountyLayer.setStyle({
+            fill: false,
             fillColor: 'transparent',
             fillOpacity: 0,
             color: 'transparent',  // Hide boundary line
@@ -422,6 +424,7 @@ async function loadCountyBoundaries() {
                     
                     // Select this county - show boundary line and shade
                     layer.setStyle({
+                        fill: true,
                         fillColor: color,
                         fillOpacity: 0.4,
                         color: '#333',
