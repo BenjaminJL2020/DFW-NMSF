@@ -14,25 +14,34 @@ const schoolLayerGroup = L.layerGroup();
 map.addLayer(schoolLayerGroup);
 
 // County boundaries GeoJSON layer (expects tx-counties.geojson in same folder)
-let countiesLayer = L.geoJSON(null, {
-    style: {
-        color: '#555',
-        weight: 1,
-        fill: false
-    }
-});
+let countiesLayer = null;
+
+// Track selected county
+let selectedCountyLayer = null;
+let selectedCountyTooltip = null;
+
+// Color palette for counties (different colors for each)
+const countyColors = [
+    'rgba(255, 200, 200, 0.3)',  // Light red
+    'rgba(200, 255, 200, 0.3)',  // Light green
+    'rgba(200, 200, 255, 0.3)',  // Light blue
+    'rgba(255, 255, 200, 0.3)',  // Light yellow
+    'rgba(255, 200, 255, 0.3)',  // Light magenta
+    'rgba(200, 255, 255, 0.3)',  // Light cyan
+    'rgba(255, 220, 200, 0.3)',  // Light orange
+    'rgba(220, 200, 255, 0.3)',  // Light purple
+];
+
+let countyColorIndex = 0;
+const countyColorMap = new Map(); // Map FIPS to color
 
 // Layer control
 const baseMaps = {
     'OpenStreetMap': osmLayer
 };
 
-const overlayMaps = {
-    'School markers': schoolLayerGroup,
-    'County boundaries': countiesLayer
-};
-
-L.control.layers(baseMaps, overlayMaps).addTo(map);
+// Layer control will be updated after counties are loaded
+let layerControl = null;
 
 // Legend for marker colors
 const legendControl = L.control({ position: 'bottomright' });
@@ -84,33 +93,35 @@ function normalizeSector(raw) {
 // ZOOM-BASED SIZING
 // ========================================
 function maxHeightForZoom(z) {
-    if (z >= 19) return 300;
-    if (z === 18) return 275;
-    if (z === 17) return 250;
-    if (z === 16) return 225;
-    if (z === 15) return 200;
-    if (z === 14) return 175;
-    if (z === 13) return 150;
-    if (z === 12) return 125;
-    if (z === 11) return 100;
-    if (z === 10) return 75;
-    if (z === 9) return 50;
-    return 50;
+    // Reduced heights to prevent overlap - scale down significantly
+    if (z >= 19) return 120;
+    if (z === 18) return 100;
+    if (z === 17) return 85;
+    if (z === 16) return 70;
+    if (z === 15) return 60;
+    if (z === 14) return 50;
+    if (z === 13) return 40;
+    if (z === 12) return 35;
+    if (z === 11) return 30;
+    if (z === 10) return 25;
+    if (z === 9) return 20;
+    return 15;
 }
 
 function barWidthForZoom(z) {
-    if (z >= 19) return 22;
-    if (z === 18) return 21;
-    if (z === 17) return 20;
-    if (z === 16) return 19;
-    if (z === 15) return 18;
-    if (z === 14) return 17;
-    if (z === 13) return 16;
-    if (z === 12) return 15;
-    if (z === 11) return 14;
-    if (z === 10) return 13;
-    if (z <= 9) return 12;
-    return 12;
+    // Narrower bars - as narrow as possible but still clickable (minimum 8px)
+    if (z >= 19) return 10;
+    if (z === 18) return 9;
+    if (z === 17) return 9;
+    if (z === 16) return 8;
+    if (z === 15) return 8;
+    if (z === 14) return 8;
+    if (z === 13) return 8;
+    if (z === 12) return 8;
+    if (z === 11) return 8;
+    if (z === 10) return 8;
+    if (z <= 9) return 8;
+    return 8;
 }
 
 function getSectorColorClass(sector) {
@@ -352,6 +363,24 @@ function initMinTotalSlider(maxTotal) {
 // ========================================
 // LOAD DATA
 // ========================================
+function clearCountySelection() {
+    if (selectedCountyLayer) {
+        const fips = selectedCountyLayer.feature.properties.FIPS;
+        const color = countyColorMap.get(fips) || 'rgba(200, 200, 200, 0.3)';
+        selectedCountyLayer.setStyle({
+            fillColor: 'transparent',
+            fillOpacity: 0,
+            color: '#555',
+            weight: 2
+        });
+        selectedCountyLayer = null;
+    }
+    if (selectedCountyTooltip) {
+        map.removeLayer(selectedCountyTooltip);
+        selectedCountyTooltip = null;
+    }
+}
+
 async function loadCountyBoundaries() {
     try {
         const response = await fetch('tx-counties.geojson');
@@ -360,7 +389,76 @@ async function loadCountyBoundaries() {
             return;
         }
         const geojson = await response.json();
-        countiesLayer.addData(geojson);
+        
+        countiesLayer = L.geoJSON(geojson, {
+            style: {
+                color: '#555',
+                weight: 2,
+                fill: false,
+                fillOpacity: 0
+            },
+            onEachFeature: (feature, layer) => {
+                // Assign a color to each county
+                const fips = feature.properties.FIPS;
+                if (!countyColorMap.has(fips)) {
+                    countyColorMap.set(fips, countyColors[countyColorIndex % countyColors.length]);
+                    countyColorIndex++;
+                }
+                
+                layer.on('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    
+                    // If clicking the same county, deselect it
+                    if (selectedCountyLayer === layer) {
+                        clearCountySelection();
+                        return;
+                    }
+                    
+                    // Clear previous selection
+                    clearCountySelection();
+                    
+                    // Select this county
+                    const color = countyColorMap.get(fips);
+                    layer.setStyle({
+                        fillColor: color,
+                        fillOpacity: 0.4,
+                        color: '#333',
+                        weight: 3
+                    });
+                    selectedCountyLayer = layer;
+                    
+                    // Show county name
+                    const center = layer.getBounds().getCenter();
+                    const countyName = feature.properties.COUNTY || feature.properties.NAME || 'County';
+                    selectedCountyTooltip = L.tooltip({
+                        permanent: true,
+                        direction: 'center',
+                        className: 'county-tooltip'
+                    })
+                    .setContent('<strong style="font-size:14px;">' + countyName + '</strong>')
+                    .setLatLng(center)
+                    .addTo(map);
+                    
+                    layer.bringToFront();
+                });
+            }
+        });
+        
+        countiesLayer.addTo(map);
+        
+        // Update layer control
+        if (!layerControl) {
+            const overlayMaps = {
+                'School markers': schoolLayerGroup,
+                'County boundaries': countiesLayer
+            };
+            layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
+        }
+        
+        // Clear selection when clicking on map (not on county)
+        map.on('click', () => {
+            clearCountySelection();
+        });
     } catch (err) {
         console.warn('Error loading tx-counties.geojson:', err);
     }
@@ -439,12 +537,21 @@ async function loadSchoolData() {
 // ========================================
 // ZOOM EVENT HANDLERS
 // ========================================
+const zoomEl = document.getElementById('zoom-level');
+function updateZoomLabel() {
+    if (zoomEl) {
+        zoomEl.textContent = 'Zoom: ' + map.getZoom();
+    }
+}
+
 map.on('zoomend', () => {
+    updateZoomLabel();
     updateBarsForZoom();
 });
 
 // Also update when zooming starts for smoother experience
 map.on('zoom', () => {
+    updateZoomLabel();
     updateBarsForZoom();
 });
 
@@ -459,6 +566,7 @@ map.on('moveend', () => {
 // ========================================
 map.whenReady(() => {
     // Ensure bars are updated when map is ready
+    updateZoomLabel();
     setTimeout(() => {
         updateBarsForZoom();
         updateBarsForFilters();

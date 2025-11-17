@@ -135,7 +135,7 @@
         }
         .nmsf-chart {
             display: flex;
-            gap: 4px;
+            gap: 2px;
             align-items: flex-end;
         }
         .nmsf-bar-wrap {
@@ -148,6 +148,8 @@
             background: rgba(31, 120, 180, 0.7);
             border-radius: 3px 3px 0 0;
             min-height: 4px;
+            cursor: pointer;
+            min-width: 8px;
         }
         .nmsf-bar.sector-public {
             background: rgba(31, 120, 180, 0.7);
@@ -186,11 +188,33 @@
             color: #0b3d91;
             text-shadow: 0 1px 3px #fff;
             white-space: nowrap;
+            font-family: "Arial Narrow", Arial, sans-serif;
+        }
+
+        #zoom-level {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font: 12px sans-serif;
+            z-index: 1000;
+        }
+
+        .county-tooltip {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #333;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div id="zoom-level">Zoom: …</div>
 
     <div id="controls" class="map-controls">
         <h3>Filters</h3>
