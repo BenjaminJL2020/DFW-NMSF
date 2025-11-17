@@ -27,6 +27,11 @@ let selectedCountyTooltip = null;
 // Track selected school
 let selectedSchoolMarker = null;
 
+// Mobile detection
+function isMobileDevice() {
+    return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 // Only show these counties
 const wantedCounties = ['Dallas County', 'Collin County', 'Denton County', 'Tarrant County', 'Rockwall County'];
 
@@ -305,10 +310,22 @@ function refreshIconElements() {
         const chart = selectedSchoolMarker.iconEl.querySelector('.nmsf-chart');
         if (chart) {
             chart.classList.add('selected');
+            // Restore mobile expansion if on mobile
+            if (isMobileDevice()) {
+                chart.classList.add('mobile-expanded');
+                const barWraps = chart.querySelectorAll('.nmsf-bar-wrap');
+                barWraps.forEach(wrap => {
+                    const topLabel = wrap.querySelector('.nmsf-top-label');
+                    const bottomLabel = wrap.querySelector('.nmsf-bottom-label');
+                    if (topLabel) topLabel.style.display = 'block';
+                    if (bottomLabel) bottomLabel.style.display = 'block';
+                });
+            }
         }
-        const bar2025 = selectedSchoolMarker.iconEl.querySelector('.nmsf-bar-wrap[data-year="2025"] .nmsf-bar');
-        if (bar2025) {
-            bar2025.classList.add('highlighted');
+        const label = selectedSchoolMarker.iconEl.querySelector('.nmsf-label');
+        if (label) {
+            label.classList.add('selected-visible');
+            label.style.display = 'flex';
         }
     }
 }
@@ -337,21 +354,29 @@ function updateBarsForZoom() {
             // Always wrap text to at most two lines
             label.innerHTML = wrapTextToTwoLines(school.name);
             
-            // Show/hide school name based on zoom level
-            if (z >= 12 && z <= 15) {
-                // Always visible at zoom 12-15
-                label.classList.remove('hover-only');
+            // If this school is selected, always show the label
+            const isSelected = selectedSchoolMarker && selectedSchoolMarker.iconEl === iconEl;
+            if (isSelected) {
+                label.classList.add('selected-visible');
                 label.style.display = 'flex';
-            } else if (z <= 11) {
-                // Hidden by default, show only on hover at zoom 11 and below
-                label.classList.add('hover-only');
-                // Remove inline display style so CSS can control it
-                if (label.style.display) {
-                    label.style.removeProperty('display');
-                }
             } else {
-                label.style.display = 'none';
-                label.classList.remove('hover-only');
+                label.classList.remove('selected-visible');
+                // Show/hide school name based on zoom level
+                if (z >= 12 && z <= 15) {
+                    // Always visible at zoom 12-15
+                    label.classList.remove('hover-only');
+                    label.style.display = 'flex';
+                } else if (z <= 11) {
+                    // Hidden by default, show only on hover at zoom 11 and below
+                    label.classList.add('hover-only');
+                    // Remove inline display style so CSS can control it
+                    if (label.style.display) {
+                        label.style.removeProperty('display');
+                    }
+                } else {
+                    label.style.display = 'none';
+                    label.classList.remove('hover-only');
+                }
             }
         }
     });
@@ -511,11 +536,15 @@ function clearSchoolSelection() {
         const chart = selectedSchoolMarker.iconEl.querySelector('.nmsf-chart');
         if (chart) {
             chart.classList.remove('selected');
+            // Remove mobile expansion
+            if (isMobileDevice()) {
+                chart.classList.remove('mobile-expanded');
+            }
         }
-        // Remove highlight from 2025 column
-        const bar2025 = selectedSchoolMarker.iconEl.querySelector('.nmsf-bar-wrap[data-year="2025"] .nmsf-bar');
-        if (bar2025) {
-            bar2025.classList.remove('highlighted');
+        // Remove forced display of school name - let it follow normal display rules
+        const label = selectedSchoolMarker.iconEl.querySelector('.nmsf-label');
+        if (label) {
+            label.classList.remove('selected-visible');
         }
         selectedSchoolMarker = null;
     }
@@ -532,11 +561,24 @@ function selectSchool(marker) {
         const chart = marker.iconEl.querySelector('.nmsf-chart');
         if (chart) {
             chart.classList.add('selected');
+            // On mobile, expand the chart
+            if (isMobileDevice()) {
+                chart.classList.add('mobile-expanded');
+                // Show all labels for all bars
+                const barWraps = chart.querySelectorAll('.nmsf-bar-wrap');
+                barWraps.forEach(wrap => {
+                    const topLabel = wrap.querySelector('.nmsf-top-label');
+                    const bottomLabel = wrap.querySelector('.nmsf-bottom-label');
+                    if (topLabel) topLabel.style.display = 'block';
+                    if (bottomLabel) bottomLabel.style.display = 'block';
+                });
+            }
         }
-        // Highlight 2025 column
-        const bar2025 = marker.iconEl.querySelector('.nmsf-bar-wrap[data-year="2025"] .nmsf-bar');
-        if (bar2025) {
-            bar2025.classList.add('highlighted');
+        // Show school name when selected
+        const label = marker.iconEl.querySelector('.nmsf-label');
+        if (label) {
+            label.classList.add('selected-visible');
+            label.style.display = 'flex';
         }
     }
 }

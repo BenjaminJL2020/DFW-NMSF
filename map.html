@@ -143,16 +143,14 @@
             background: rgba(240, 240, 240, 0.4);
             padding: 5px;
             border-radius: 2px;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, transform 0.3s ease;
             cursor: pointer;
         }
         .nmsf-chart.selected {
             background: rgba(255, 200, 0, 0.6);
         }
-        .nmsf-bar-wrap[data-year="2025"] .nmsf-bar.highlighted {
-            outline: 3px solid rgba(255, 0, 0, 0.8);
-            outline-offset: 2px;
-            box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+        .nmsf-label.selected-visible {
+            display: flex !important;
         }
         .nmsf-bar-wrap {
             position: relative;
@@ -297,6 +295,91 @@
             border-radius: 4px;
             padding: 4px 8px;
             font-weight: bold;
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            .map-controls {
+                font-size: 16px;
+                padding: 12px 14px;
+                max-width: 300px;
+            }
+            .map-controls h3 {
+                font-size: 18px;
+                margin-bottom: 8px;
+            }
+            .map-controls strong {
+                font-size: 16px;
+            }
+            .legend-control {
+                font-size: 16px;
+                padding: 10px 12px;
+            }
+            .legend-swatch {
+                width: 16px;
+                height: 16px;
+                margin-right: 8px;
+            }
+            #zoom-level {
+                font-size: 16px;
+                padding: 6px 10px;
+            }
+            #map-title {
+                font-size: 16px;
+                padding: 10px 14px;
+            }
+            #map-title h1 {
+                font-size: 18px;
+            }
+            #map-title .subtitle {
+                font-size: 14px;
+            }
+            .nmsf-label {
+                font-size: 16px;
+                max-width: 180px;
+            }
+            .nmsf-top-label,
+            .nmsf-bottom-label {
+                font-size: 14px;
+                padding: 4px 8px;
+            }
+            
+            /* Expanded chart state for mobile */
+            .nmsf-chart.mobile-expanded {
+                transform: scale(2.5);
+                transform-origin: center bottom;
+                z-index: 2000;
+                padding: 12px;
+                gap: 8px;
+                background: rgba(255, 255, 255, 0.95);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            }
+            .nmsf-chart.mobile-expanded .nmsf-bar {
+                min-width: 20px;
+            }
+            .nmsf-chart.mobile-expanded .nmsf-top-label {
+                display: block !important;
+                font-size: 18px;
+                padding: 8px 12px;
+                font-weight: 700;
+                white-space: nowrap;
+                transform: translateY(-12px);
+            }
+            .nmsf-chart.mobile-expanded .nmsf-bottom-label {
+                display: block !important;
+                font-size: 18px;
+                padding: 8px 12px;
+                font-weight: 700;
+                white-space: nowrap;
+                transform: translateY(12px);
+            }
+            .nmsf-chart.mobile-expanded .nmsf-bar-wrap {
+                gap: 6px;
+            }
+            .nmsf-chart.mobile-expanded + .nmsf-label {
+                font-size: 20px;
+                margin-top: 8px;
+            }
         }
     </style>
 </head>
