@@ -9,9 +9,10 @@ const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
     maxZoom: 19
 }).addTo(map);
 
-// Marker cluster group for schools
+// Marker cluster group for schools - disabled clustering so all charts always display
 const clusterGroup = L.markerClusterGroup({
-    disableClusteringAtZoom: 15
+    disableClusteringAtZoom: 0,  // Never cluster - show all charts at all zoom levels
+    maxClusterRadius: 0  // Completely disable clustering
 });
 map.addLayer(clusterGroup);
 
