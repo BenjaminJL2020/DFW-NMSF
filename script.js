@@ -63,8 +63,8 @@ legendControl.addTo(map);
 // ========================================
 let schools = [];
 let yearKeys = [];
-const markers = [];
-const popupCharts = {};
+const markers = []; // {school, marker, iconEl}
+let GLOBAL_MAX = 0; // Maximum NMSF value across all schools and years
 
 // ========================================
 // UTILITIES
@@ -82,20 +82,43 @@ function normalizeSector(raw) {
     return 'public';
 }
 
-function makeSectorIcon(sector) {
-    let className = 'school-marker';
-    if (sector === 'private') {
-        className += ' sector-private';
-    } else if (sector === 'public charter') {
-        className += ' sector-charter';
-    } else {
-        className += ' sector-public';
-    }
+// ========================================
+// ZOOM-BASED SIZING
+// ========================================
+function maxHeightForZoom(z) {
+    if (z >= 19) return 300;
+    if (z === 18) return 275;
+    if (z === 17) return 250;
+    if (z === 16) return 225;
+    if (z === 15) return 200;
+    if (z === 14) return 175;
+    if (z === 13) return 150;
+    if (z === 12) return 125;
+    if (z === 11) return 100;
+    if (z === 10) return 75;
+    if (z === 9) return 50;
+    return 50;
+}
 
-    return L.divIcon({
-        className,
-        iconSize: [18, 18]
-    });
+function barWidthForZoom(z) {
+    if (z >= 19) return 22;
+    if (z === 18) return 21;
+    if (z === 17) return 20;
+    if (z === 16) return 19;
+    if (z === 15) return 18;
+    if (z === 14) return 17;
+    if (z === 13) return 16;
+    if (z === 12) return 15;
+    if (z === 11) return 14;
+    if (z === 10) return 13;
+    if (z <= 9) return 12;
+    return 12;
+}
+
+function getSectorColorClass(sector) {
+    if (sector === 'private') return 'sector-private';
+    if (sector === 'public charter') return 'sector-charter';
+    return 'sector-public';
 }
 
 // ========================================
@@ -146,108 +169,130 @@ function passesFilters(school) {
 
 function applyFilters() {
     clusterGroup.clearLayers();
-    markers.forEach(marker => {
-        const school = marker._schoolData;
+    markers.forEach(({ marker, school }) => {
         if (passesFilters(school)) {
             clusterGroup.addLayer(marker);
         }
     });
+    updateBarsForFilters();
 }
 
 // ========================================
-// POPUP + CHART
+// CHART HTML GENERATION
 // ========================================
-function getChartIdForSchool(school) {
-    return school.chartId;
-}
-
-function buildPopupHTML(school) {
-    const activeYears = getActiveYears();
-    const yearsToShow = activeYears.length ? activeYears : yearKeys;
-
-    const rows = yearsToShow.map(y =>
-        `${y}: ${school.counts[y] ?? 0}`
-    ).join('<br>');
-
+function makeSchoolHTML(school, idx) {
+    const sectorClass = getSectorColorClass(school.sector);
+    const bars = yearKeys.map(year => {
+        const count = school.counts[year] || 0;
+        return `
+            <div class="nmsf-bar-wrap" data-year="${year}">
+                <div class="nmsf-hover-label">${year}: ${count} NMSF</div>
+                <div class="nmsf-bar ${sectorClass}" data-school="${idx}" data-year="${year}"></div>
+            </div>
+        `;
+    }).join('');
+    
     return `
-        <div>
-            <div style="font-weight:bold; font-size:15px;">
-                ${school.name}
+        <div class="nmsf-wrapper" data-school="${idx}">
+            <div class="nmsf-chart">
+                ${bars}
             </div>
-            <div style="margin-top:4px;">
-                ${school.rawSector}
-            </div>
-            <hr>
-            <div>${rows}</div>
-            <div class="popup-chart-wrapper">
-                <canvas id="${school.chartId}"></canvas>
-            </div>
+            <div class="nmsf-label">${school.name}</div>
         </div>
     `;
 }
 
-function renderPopupChart(school) {
-    const chartId = getChartIdForSchool(school);
-    const canvas = document.getElementById(chartId);
-    if (!canvas) return;
-
-    const activeYears = getActiveYears();
-    const yearsToShow = activeYears.length ? activeYears : yearKeys;
-    if (yearsToShow.length === 0) return;
-
-    const data = yearsToShow.map(y => school.counts[y] || 0);
-
-    if (popupCharts[chartId]) {
-        popupCharts[chartId].destroy();
-    }
-
-    popupCharts[chartId] = new Chart(canvas.getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: yearsToShow,
-            datasets: [{
-                label: 'NMSF',
-                data: data
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                x: { ticks: { autoSkip: false } },
-                y: { beginAtZero: true, precision: 0 }
-            }
+function refreshIconElements() {
+    markers.forEach(({ marker }, idx) => {
+        if (marker._icon) {
+            markers[idx].iconEl = marker._icon;
         }
     });
 }
 
-// When popup opens, render the chart for that school
-map.on('popupopen', function (e) {
-    const marker = e.popup._source;
-    const school = marker._schoolData;
-    if (!school) return;
-    renderPopupChart(school);
-});
+function updateBarsForZoom() {
+    refreshIconElements();
+    const z = map.getZoom();
+    const maxH = maxHeightForZoom(z);
+    const barW = barWidthForZoom(z);
+    
+    markers.forEach(({ school, iconEl }, idx) => {
+        if (!iconEl) return;
+        const bars = iconEl.querySelectorAll(`.nmsf-bar[data-school="${idx}"]`);
+        bars.forEach(bar => {
+            const year = bar.getAttribute('data-year');
+            const val = school.counts[year] || 0;
+            bar.style.height = Math.max(4, (val / GLOBAL_MAX) * maxH) + 'px';
+            bar.style.width = barW + 'px';
+        });
+    });
+}
+
+function updateBarsForFilters() {
+    refreshIconElements();
+    const activeYears = getActiveYears();
+    const activeYearsSet = new Set(activeYears);
+    
+    markers.forEach(({ iconEl }) => {
+        if (!iconEl) return;
+        const barWraps = iconEl.querySelectorAll('.nmsf-bar-wrap');
+        barWraps.forEach(wrap => {
+            const year = wrap.getAttribute('data-year');
+            const bar = wrap.querySelector('.nmsf-bar');
+            if (activeYearsSet.has(year)) {
+                wrap.style.display = '';
+                bar.classList.remove('hidden');
+            } else {
+                wrap.style.display = 'none';
+                bar.classList.add('hidden');
+            }
+        });
+    });
+}
 
 // ========================================
 // BUILD MARKERS
 // ========================================
 function buildMarkers() {
+    markers.length = 0; // Clear existing markers
+    
     schools.forEach((school, index) => {
-        const marker = L.marker(school.coords, {
-            icon: makeSectorIcon(school.sector)
+        const html = makeSchoolHTML(school, index);
+        const icon = L.divIcon({
+            className: 'nmsf-marker',
+            html,
+            iconSize: [1, 1],
+            iconAnchor: [0, 0]
         });
-
-        school.chartId = `chart-${index}`;
+        
+        const marker = L.marker(school.coords, { icon });
         marker._schoolData = school;
-        marker.bindPopup(buildPopupHTML(school));
-
-        markers.push(marker);
+        
+        // Simple popup with school info
+        marker.bindPopup(`
+            <div>
+                <div style="font-weight:bold; font-size:15px;">${school.name}</div>
+                <div style="margin-top:4px;">${school.rawSector}</div>
+            </div>
+        `);
+        
+        markers.push({ school, marker, iconEl: null });
         clusterGroup.addLayer(marker);
     });
+    
+    // Store icon elements after markers are added
+    markers.forEach(({ marker }) => {
+        if (marker._icon) {
+            const idx = markers.findIndex(m => m.marker === marker);
+            if (idx >= 0) {
+                markers[idx].iconEl = marker._icon;
+            }
+        }
+    });
+    
+    // Initial update
+    updateBarsForZoom();
+    updateBarsForFilters();
 }
 
 // ========================================
@@ -280,6 +325,7 @@ function initYearFilters() {
     container.querySelectorAll('.year-filter').forEach(cb => {
         cb.addEventListener('change', () => {
             applyFilters();
+            updateBarsForFilters();
         });
     });
 }
@@ -352,6 +398,15 @@ async function loadSchoolData() {
             };
         });
 
+        // Calculate global max for consistent scaling
+        const allVals = [];
+        schools.forEach(s => {
+            yearKeys.forEach(y => {
+                allVals.push(s.counts[y] || 0);
+            });
+        });
+        GLOBAL_MAX = Math.max.apply(null, allVals.length > 0 ? allVals : [1]);
+
         // Initialize filters based on data
         initYearFilters();
         initSectorFilters();
@@ -367,13 +422,58 @@ async function loadSchoolData() {
         // Build markers and apply initial filters
         buildMarkers();
         applyFilters();
+        
+        // Update icon elements after a short delay to ensure they're rendered
+        setTimeout(() => {
+            markers.forEach(({ marker }, idx) => {
+                if (marker._icon) {
+                    markers[idx].iconEl = marker._icon;
+                }
+            });
+            updateBarsForZoom();
+            updateBarsForFilters();
+        }, 100);
     } catch (err) {
         console.error('Error loading school data:', err);
     }
 }
 
 // ========================================
+// ZOOM EVENT HANDLERS
+// ========================================
+map.on('zoomend', () => {
+    updateBarsForZoom();
+});
+
+// Also update when zooming starts for smoother experience
+map.on('zoom', () => {
+    updateBarsForZoom();
+});
+
+// Update bars when markers are added/removed from clusters
+clusterGroup.on('animationend', () => {
+    updateBarsForZoom();
+    updateBarsForFilters();
+});
+
+// Also update when clusters are created/removed
+clusterGroup.on('clusteradd', () => {
+    setTimeout(() => {
+        updateBarsForZoom();
+        updateBarsForFilters();
+    }, 50);
+});
+
+// ========================================
 // STARTUP
 // ========================================
+map.whenReady(() => {
+    // Ensure bars are updated when map is ready
+    setTimeout(() => {
+        updateBarsForZoom();
+        updateBarsForFilters();
+    }, 200);
+});
+
 loadSchoolData();
 loadCountyBoundaries();
