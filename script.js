@@ -24,6 +24,9 @@ let countiesLayer = null;
 let selectedCountyLayer = null;
 let selectedCountyTooltip = null;
 
+// Track selected school
+let selectedSchoolMarker = null;
+
 // Only show these counties
 const wantedCounties = ['Dallas County', 'Collin County', 'Denton County', 'Tarrant County', 'Rockwall County'];
 
@@ -257,8 +260,57 @@ function refreshIconElements() {
     markers.forEach(({ marker }, idx) => {
         if (marker._icon) {
             markers[idx].iconEl = marker._icon;
+            
+            // Add click handlers to chart and wrapper for better click responsiveness
+            // Use data attribute to track if we've already set up handlers
+            const wrapper = marker._icon.querySelector('.nmsf-wrapper');
+            const chart = marker._icon.querySelector('.nmsf-chart');
+            
+            if (wrapper && !wrapper.dataset.clickHandlerSet) {
+                wrapper.dataset.clickHandlerSet = 'true';
+                wrapper.style.cursor = 'pointer';
+                wrapper.addEventListener('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    const markerData = markers[idx];
+                    if (markerData) {
+                        if (selectedSchoolMarker === markerData) {
+                            clearSchoolSelection();
+                        } else {
+                            selectSchool(markerData);
+                        }
+                    }
+                });
+            }
+            
+            if (chart && !chart.dataset.clickHandlerSet) {
+                chart.dataset.clickHandlerSet = 'true';
+                chart.style.cursor = 'pointer';
+                chart.addEventListener('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    const markerData = markers[idx];
+                    if (markerData) {
+                        if (selectedSchoolMarker === markerData) {
+                            clearSchoolSelection();
+                        } else {
+                            selectSchool(markerData);
+                        }
+                    }
+                });
+            }
         }
     });
+    
+    // Restore selection state if a school is selected
+    if (selectedSchoolMarker && selectedSchoolMarker.iconEl) {
+        const chart = selectedSchoolMarker.iconEl.querySelector('.nmsf-chart');
+        if (chart) {
+            chart.classList.add('selected');
+        }
+        const bar2025 = selectedSchoolMarker.iconEl.querySelector('.nmsf-bar-wrap[data-year="2025"] .nmsf-bar');
+        if (bar2025) {
+            bar2025.classList.add('highlighted');
+        }
+    }
 }
 
 function updateBarsForZoom() {
@@ -345,13 +397,19 @@ function buildMarkers() {
         const marker = L.marker(school.coords, { icon });
         marker._schoolData = school;
         
-        // Simple popup with school info
-        marker.bindPopup(`
-            <div>
-                <div style="font-weight:bold; font-size:15px;">${school.name}</div>
-                <div style="margin-top:4px;">${school.rawSector}</div>
-            </div>
-        `);
+        // Handle click on marker to select school and highlight 2025 column
+        marker.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            const markerData = markers.find(m => m.marker === marker);
+            if (markerData) {
+                // If clicking the same school, deselect it
+                if (selectedSchoolMarker === markerData) {
+                    clearSchoolSelection();
+                } else {
+                    selectSchool(markerData);
+                }
+            }
+        });
         
         markers.push({ school, marker, iconEl: null });
         schoolLayerGroup.addLayer(marker);
@@ -448,6 +506,41 @@ function clearCountySelection() {
     }
 }
 
+function clearSchoolSelection() {
+    if (selectedSchoolMarker && selectedSchoolMarker.iconEl) {
+        const chart = selectedSchoolMarker.iconEl.querySelector('.nmsf-chart');
+        if (chart) {
+            chart.classList.remove('selected');
+        }
+        // Remove highlight from 2025 column
+        const bar2025 = selectedSchoolMarker.iconEl.querySelector('.nmsf-bar-wrap[data-year="2025"] .nmsf-bar');
+        if (bar2025) {
+            bar2025.classList.remove('highlighted');
+        }
+        selectedSchoolMarker = null;
+    }
+}
+
+function selectSchool(marker) {
+    // Clear previous selection
+    clearSchoolSelection();
+    
+    // Set new selection
+    selectedSchoolMarker = marker;
+    
+    if (marker.iconEl) {
+        const chart = marker.iconEl.querySelector('.nmsf-chart');
+        if (chart) {
+            chart.classList.add('selected');
+        }
+        // Highlight 2025 column
+        const bar2025 = marker.iconEl.querySelector('.nmsf-bar-wrap[data-year="2025"] .nmsf-bar');
+        if (bar2025) {
+            bar2025.classList.add('highlighted');
+        }
+    }
+}
+
 async function loadCountyBoundaries() {
     try {
         const response = await fetch('tx-counties.geojson');
@@ -527,9 +620,10 @@ async function loadCountyBoundaries() {
             layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
         }
         
-        // Clear selection when clicking on map (not on county)
+        // Clear selection when clicking on map (not on county or school)
         map.on('click', () => {
             clearCountySelection();
+            clearSchoolSelection();
         });
     } catch (err) {
         console.warn('Error loading tx-counties.geojson:', err);

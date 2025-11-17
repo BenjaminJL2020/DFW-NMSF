@@ -133,6 +133,7 @@
             flex-direction: row;
             align-items: flex-end;
             gap: 8px;
+            cursor: pointer;
         }
         .nmsf-chart {
             display: flex;
@@ -140,8 +141,18 @@
             align-items: flex-end;
             position: relative;
             background: rgba(240, 240, 240, 0.4);
-            padding: 3px;
+            padding: 5px;
             border-radius: 2px;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .nmsf-chart.selected {
+            background: rgba(255, 200, 0, 0.6);
+        }
+        .nmsf-bar-wrap[data-year="2025"] .nmsf-bar.highlighted {
+            outline: 3px solid rgba(255, 0, 0, 0.8);
+            outline-offset: 2px;
+            box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
         }
         .nmsf-bar-wrap {
             position: relative;
